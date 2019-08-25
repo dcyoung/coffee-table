@@ -1,0 +1,29 @@
+FILE NAME: SPBay1983_50.asc
+SOURCE: NOS Hydrographic Survey Database GEODAS
+
+DATA SET:
+NOAA-NOS 1983 Hydrographic survey of San Pablo Bay. 
+The original point coverage includes 65,739 soundings.
+Contours at 0, 6, 12, 18, 30, 36, and 60 feet.
+The ArcInfo routine TOPOGRID was used to produce the grid.
+The elevation grid (negative depth) was then converted to a 
+Depth grid and rounded to the nearest centimeter.
+
+
+
+Projection    UTM                                                               
+Zone          10                                                                
+Datum         NAD83                                                             
+Zunits        NO                                                                
+Units         METERS                                                            
+Spheroid      GRS1980                                                           
+
+Vertical Datum	MLLW (Mean Lower Low Water)
+
+Depth units cm, increasing positive depths. Negative values indicate
+intertidal.
+
+
+September, 2002 resmith@usgs.gov
+
+

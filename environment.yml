@@ -1,0 +1,7 @@
+name: coffee-table
+dependencies:
+    - python=3.7
+    - black
+    - pylint 
+    - numpy
+    - matplotlib

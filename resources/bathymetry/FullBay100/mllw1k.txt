@@ -1,0 +1,34 @@
+FILE NAME: mllw1k.asc
+SOURCE: Jill Petersen
+        Jill_Petersen@hazmat.noaa.gov
+        NOAA Hazmat
+        7600 Sand Point Way NE
+        Seattle
+        (206)526-6317
+        ftp 140.90.161.100 /public/HAZMAT/sfb_bath. Version Feb 97.
+
+DATA SET:
+NOAA-NOS 30m grid of bathymetric data(1957-1993)
+for San Francisco Bay including Potato PatchShoals. 
+The original point coverage includes 535,188 soundings.
+
+
+The original grid was projected to UTM, NAD83, then 
+resampled to 100m grid cell.
+
+
+Projection    UTM                                                               
+Zone          10                                                                
+Datum         NAD83                                                             
+Zunits        NO                                                                
+Units         METERS                                                            
+Spheroid      GRS1980                                                           
+
+Vertical Datum	MLLW (Mean Lower Low Water)
+
+Depth units cm, increasing positive depths. Negative values indicate
+intertidal.
+
+
+September, 2001 resmith@usgs.gov
+
