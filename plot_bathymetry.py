@@ -43,14 +43,14 @@ def _plot_depth_3D_as_height_map(data):
     return fig
 
 
-def _plot_depth_3D_as_contours(data):
+def _plot_depth_3D_as_contours(data, levels=None):
     z = -(data - np.amax(data))
     x, y = np.meshgrid(range(z.shape[0]), range(z.shape[1]))
 
     fig = plt.figure()
     # plot
     ax = fig.add_subplot(111, projection="3d")
-    ax.contour3D(x, y, np.transpose(z), 50, cmap="binary")
+    ax.contour3D(x, y, np.transpose(z), 50, cmap="binary", levels=levels)
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")

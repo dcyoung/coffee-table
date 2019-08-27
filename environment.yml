@@ -5,3 +5,5 @@ dependencies:
     - pylint 
     - numpy
     - matplotlib
+    - tqdm
+    - pillow

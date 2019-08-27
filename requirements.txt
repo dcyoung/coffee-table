@@ -2,3 +2,5 @@ black
 pylint 
 numpy
 matplotlib
+pillow
+tqdm
