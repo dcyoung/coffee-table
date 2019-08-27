@@ -37,7 +37,7 @@ def main(args):
     os.makedirs(args.output, exist_ok=True)
 
     print("Creating plots...")
-    for n_clusters in tqdm(range(4, 64, 4)):
+    for n_clusters in tqdm([2,3,4,5,6,7,8,12,16,24,32,48,64]):
         quant = im.quantize(n_clusters)
         arr = np.array(quant)
 
