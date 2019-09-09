@@ -34,41 +34,44 @@ def main(args):
     im = im.astype(np.uint8)
     im = PIL.Image.fromarray(im)
 
-    os.makedirs(args.output, exist_ok=True)
-
     print("Creating plots...")
-    for n_clusters in tqdm([2,3,4,5,6,7,8,12,16,24,32,48,64]):
+    #for n_clusters in tqdm([2, 3, 4, 5, 6, 7, 8, 12, 16, 24, 32, 48, 64]):
+    for n_clusters in tqdm([3, 4]):
+        output_dir = osp.join(args.output, "cluster_{0}".format(n_clusters))
+        os.makedirs(output_dir, exist_ok=True)
+
         quant = im.quantize(n_clusters)
         arr = np.array(quant)
 
-        fig = plt.figure()
-
         # Plot quantized heatmap
-        ax = fig.add_subplot(121)
+        fig = plt.figure()
         p = plt.imshow(quant)
         plt.colorbar(p)
-        ax.set_title("Quantized: {0} clusters".format(n_clusters))
-
-        # Plot contours
-        ax = fig.add_subplot(122, projection="3d")
-        plot_contours(ax=ax, data=arr, levels=args.levels, cmap="viridis")
-        # invert
-        # plot_contours(
-        #     ax=ax, data=-(arr - np.amax(arr)), levels=args.levels, cmap="viridis"
-        # )
-
-        if args.viz:
-            plt.show()
-
+        plt.title("Quantized: {0} clusters".format(n_clusters))
         plt.savefig(
-            osp.join(
-                args.output,
-                "quantized_{0}_levels_{1}.png".format(n_clusters, args.levels),
-            ),
-            dpi=500
+            osp.join(output_dir, "quantized_{0}_clusters.png".format(n_clusters)),
+            dpi=1000,
         )
-
         plt.close()
+
+        for n_levels in range(1, args.levels):
+            fig = plt.figure()
+            # Plot contours
+            ax = plt.axes(projection="3d")
+            plot_contours(ax=ax, data=arr, levels=n_levels, cmap="viridis")
+            # invert
+            # plot_contours(
+            #     ax=ax, data=-(arr - np.amax(arr)), levels=args.levels, cmap="viridis"
+            # )
+
+            if args.viz:
+                plt.show()
+
+            plt.savefig(
+                osp.join(output_dir, "{0}_levels.png".format(n_levels)), dpi=500
+            )
+
+            plt.close()
 
 
 if __name__ == "__main__":
