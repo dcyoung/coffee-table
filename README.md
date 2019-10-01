@@ -2,7 +2,7 @@
 
 Tools, visuals and CAD related to the design of a custom coffee table derived from bathymetry data.
 
-![bathymetry-output](output/contour_templates/quantized_4_levels_5.png)
+![bathymetry-output](output/contour_templates/cluster_4/4_levels.png)
 ![bathymetry-output](output/bathymetry_plots/heatmap.png)
 ![bathymetry-output](output/bathymetry_plots_clipped/heightmap.png)
 
