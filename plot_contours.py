@@ -1,23 +1,20 @@
 import os
 import os.path as osp
-import numpy as np
+
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from tqdm import tqdm
+import numpy as np
 import PIL
 
 
-def plot_contours(ax, data, levels=5, cmap="binary"):
-    # z = -(data - np.amax(data))
-    z = data
-    x, y = np.meshgrid(range(z.shape[0]), range(z.shape[1]))
+def plot_contours(ax, z_data, levels, cmap: str = "binary"):
+    x, y = np.meshgrid(range(z_data.shape[0]), range(z_data.shape[1]))
 
     # plot
-    ax.contourf3D(x, y, np.transpose(z), 50, cmap=cmap, levels=levels)
+    ax.contourf3D(x, y, np.transpose(z_data), 50, cmap=cmap, levels=levels)
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
-    ax.set_title("Depth as 3d contours. levels={0}".format(levels))
+    ax.set_title(f"Depth as 3d contours. N-Levels={levels}")
     ax.set_xlabel("X (100 m)")
     ax.set_ylabel("Y (100 m)")
     ax.set_zlabel("Z (m)")
@@ -25,53 +22,93 @@ def plot_contours(ax, data, levels=5, cmap="binary"):
 
 
 def main(args):
-    print("Reading file...")
+    print("Loading data...")
+    # data provided as a grid w/ 100m spacing, with z-depth values representing water depth
+    # Depth units are in cm, increasing positive depths. Negative values indicate intertidal.
     depth_grid = np.loadtxt(args.input, skiprows=7)
-    depth_grid = np.clip(depth_grid, a_min=0, a_max=None)
 
-    im = depth_grid - depth_grid.min()
-    im *= 255.0 / im.max()
-    im = im.astype(np.uint8)
-    im = PIL.Image.fromarray(im)
+    depth_clip_min_cm = 0
+    depth_clip_max_cm = None
+
+    # # Include intertidal:
+    # depth_grid -= depth_grid.min()
+    # depth_grid = np.clip(depth_grid, a_min=depth_clip_min_cm, a_max=depth_clip_max_cm)
+
+    # Ignore intertidal
+    depth_grid = np.clip(depth_grid, a_min=depth_clip_min_cm, a_max=depth_clip_max_cm)
+    depth_grid -= depth_grid.min()
+
+    max_depth_cm = depth_grid.max()
+    max_depth_m = max_depth_cm * 0.01
+
+    depth_grid_norm = depth_grid / depth_grid.max()
+
+    print(f"Max depth: {max_depth_m}m")
 
     print("Creating plots...")
-    #for n_clusters in tqdm([2, 3, 4, 5, 6, 7, 8, 12, 16, 24, 32, 48, 64]):
-    for n_clusters in tqdm([3, 4]):
-        output_dir = osp.join(args.output, "cluster_{0}".format(n_clusters))
-        os.makedirs(output_dir, exist_ok=True)
+    output_dir = args.output
+    os.makedirs(output_dir, exist_ok=True)
 
-        quant = im.quantize(n_clusters)
-        arr = np.array(quant)
+    # Raw depth map image
+    # yields a grayscale image w/ pixel values in range 0-255 corresponding to 0-max-depth)
+    depth_map_im_raw = PIL.Image.fromarray((255.0 * depth_grid_norm).astype(np.uint8))
+    depth_map_im_raw.save(osp.join(output_dir, "depth_map_raw.png"))
 
-        # Plot quantized heatmap
-        fig = plt.figure()
-        p = plt.imshow(quant)
-        plt.colorbar(p)
-        plt.title("Quantized: {0} clusters".format(n_clusters))
-        plt.savefig(
-            osp.join(output_dir, "quantized_{0}_clusters.png".format(n_clusters)),
-            dpi=1000,
-        )
-        plt.close()
+    plt.figure()
+    p = plt.imshow(depth_grid_norm * max_depth_m)
+    clb = plt.colorbar(p)
+    clb.ax.set_title("Water Depth (m)", fontsize=8)
+    plt.title("Raw Depth Map")
+    plt.xlabel("X (100 m)")
+    plt.ylabel("Y (100 m)")
+    plt.savefig(
+        osp.join(output_dir, "depth_map_raw_plot.png"), dpi=1000,
+    )
+    plt.close()
 
-        for n_levels in range(1, args.levels):
-            fig = plt.figure()
-            # Plot contours
-            ax = plt.axes(projection="3d")
-            plot_contours(ax=ax, data=arr, levels=n_levels, cmap="viridis")
-            # invert
-            # plot_contours(
-            #     ax=ax, data=-(arr - np.amax(arr)), levels=args.levels, cmap="viridis"
-            # )
+    # Quantize depth map
+    depth_map_im_quant = depth_map_im_raw.quantize(args.levels)
+    depth_map_im_quant.save(osp.join(output_dir, "depth_map_quantized.png"))
 
-            if args.viz:
-                plt.show()
+    # Convert image back to data
+    # Convert back to RGB to avoid reduced colormap issues, and reduce back to 1 channel
+    depth_grid_quant = np.array(depth_map_im_quant.convert("RGB"))[:, :, 0].astype(
+        np.float32
+    )
+    # Convert from pixel range 0-255 back to depth range 0-max_depth
+    depth_grid_quant *= max_depth_m / 255.0
+    # Plot quantized heatmap
+    plt.figure()
+    p = plt.imshow(depth_grid_quant)
+    clb = plt.colorbar(p)
+    clb.ax.set_title("Water Depth (m)", fontsize=8)
+    rounded_depths = [round(z, 2) for z in list(np.unique(depth_grid_quant))]
+    plt.title(f"Quantized Depth Map: {args.levels} depths\n{rounded_depths}m")
+    plt.xlabel("X (100 m)")
+    plt.ylabel("Y (100 m)")
+    plt.savefig(
+        osp.join(output_dir, "depth_map_quantized_plot.png"), dpi=1000,
+    )
+    plt.close()
 
-            plt.savefig(
-                osp.join(output_dir, "{0}_levels.png".format(n_levels)), dpi=500
-            )
+    # Plot contours
+    plt.figure()
+    ax = plt.axes(projection="3d")
+    plot_contours(ax=ax, z_data=depth_grid_quant, levels=args.levels, cmap="viridis")
+    plt.savefig(osp.join(output_dir, "separated_contours.jpg"), dpi=500)
+    plt.close()
 
-            plt.close()
+    # Plot inverted contours
+    plt.figure()
+    ax = plt.axes(projection="3d")
+    plot_contours(
+        ax=ax,
+        z_data=-(depth_grid_quant - np.amax(depth_grid_quant)),
+        levels=args.levels,
+        cmap="viridis",
+    )
+    plt.savefig(osp.join(output_dir, "separated_contours_inverted.jpg"), dpi=500)
+    plt.close()
 
 
 if __name__ == "__main__":
@@ -87,17 +124,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output",
         type=str,
-        default=osp.join("output", "contour_templates"),
+        default=osp.join("output", "contour_plots"),
         help="Path to write plots.",
     )
     parser.add_argument(
         "--levels",
         type=int,
-        default=5,
+        default=4,
         help="The number of evenly spaced contour levels.",
-    )
-    parser.add_argument(
-        "--viz", action="store_true", help="If included, show results on screen."
     )
     args = parser.parse_args()
 
