@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>3D Layer Viewer</title>
+	<style>
+		body {
+			margin: 0;
+		}
+	</style>
+</head>
+
+<body>
+	<script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
+	<script type="importmap">
+		{
+		  "imports": {
+			"three": "https://unpkg.com/three@0.142.0/build/three.module.js"
+		  }
+		}
+	  </script>
+	<script type="module">
+		import * as THREE from 'three';
+		import { OrbitControls } from 'https://unpkg.com/three@0.142.0/examples/jsm/controls/OrbitControls.js';
+		import { Lut } from 'https://unpkg.com/three@0.142.0/examples/jsm/math/Lut.js';
+
+		const scene = new THREE.Scene();
+		scene.background = new THREE.Color(0x000000);
+		const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+		const renderer = new THREE.WebGLRenderer();
+		renderer.physicallyCorrectLights = true;
+		renderer.toneMapping = THREE.ACESFilmicToneMapping;
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		document.body.appendChild(renderer.domElement);
+
+		const geometry = new THREE.BoxGeometry(1, 1, 1);
+		const layers = new THREE.Group();
+		scene.add(layers);
+		camera.position.z = 1;
+		camera.lookAt(0, 0, 0);
+		const controls = new OrbitControls(camera, renderer.domElement);
+
+		THREE.DefaultLoadingManager.onLoad = function () {
+			pmremGenerator.dispose();
+		};
+		let cubeRenderTarget;
+		let cubeMap;
+		cubeMap = new THREE.CubeTextureLoader()
+			.setPath('https://raw.githubusercontent.com/mrdoob/three.js/191a1ef699a5d53de2cd645c667e7fee184a18fd/examples/textures/cube/skyboxsun25deg/')
+			.load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'], function () {
+				cubeRenderTarget = pmremGenerator.fromCubemap(cubeMap);
+				cubeMap.encoding = THREE.sRGBEncoding;
+				cubeMap.needsUpdate = true;
+			});
+		const pmremGenerator = new THREE.PMREMGenerator(renderer);
+		pmremGenerator.compileCubemapShader();
+
+		const glassMaterial = new THREE.MeshPhysicalMaterial(
+			{
+				thickness: 0.0,
+				roughness: 0.8,
+				clearcoat: 0.7,
+				clearcoatRoughness: 0.0,
+				transmission: 1.0,
+				ior: 1.0,
+				envMapIntensity: 17,
+				color: '#5e82b7',
+				attenuationColor: '#ffe79e',
+				attenuationDistance: 0.0,
+			}
+		);
+		glassMaterial.envMap = cubeRenderTarget;
+		glassMaterial.needsUpdate = true;
+		scene.background = cubeMap;
+
+		function animate() {
+			requestAnimationFrame(animate);
+
+			// layers.rotation.x += 0.01;
+			// layers.rotation.y += 0.01;
+			renderer.render(scene, camera);
+		};
+
+		renderer.outputEncoding = THREE.sRGBEncoding;
+		renderer.exposure = 1.0;
+
+		animate();
+
+		const lut = new Lut('rainbow', 3);
+		for (const layerIdx of [0, 1, 2]) {
+			const extrudeSettings = {
+				steps: 1,
+				depth: 0.01,
+				bevelEnabled: false,
+			};
+			const layer = new THREE.Group();
+			fetch(`../output/contour_plots/layer_masks/layer_${layerIdx}_contours.json`)
+				.then(response => response.json())
+				.then(contours => {
+					for (const contour of contours) {
+						const vRoot = contour.vertices[0];
+						const shape = new THREE.Shape();
+						shape.moveTo(vRoot[0], vRoot[1]);
+						for (const v of contour.vertices.slice(1)) {
+							shape.lineTo(v[0], v[1]);
+						}
+						shape.lineTo(vRoot[0], vRoot[1]);
+						const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+						const mesh = new THREE.Mesh(geometry, glassMaterial);
+						// Center and offset for layer index
+						mesh.position.x = -0.5;
+						mesh.position.y = -0.5;
+						mesh.position.z = layerIdx * extrudeSettings.depth;
+						layer.add(mesh);
+					}
+				})
+			layer.rotation.x = Math.PI / 2;
+			layers.add(layer);
+		}
+	</script>
+</body>
+
+</html>

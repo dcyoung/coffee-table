@@ -188,7 +188,7 @@ var quantize = function (img, colors) {
     return quantized_canvas;
 };
 
-loadImage("./resources/depth_map_raw.png").then(img => {
+loadImage("../output/contour_plots/depth_map_raw.png").then(img => {
     let k = 4;
     var pixel_dataset = get_pixel_dataset(img, MAX_K_MEANS_PIXELS);
     var centroids = k_means(pixel_dataset, k);

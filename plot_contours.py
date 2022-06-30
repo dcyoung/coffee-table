@@ -1,3 +1,4 @@
+import json
 import os
 import os.path as osp
 
@@ -5,6 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageFilter
+from regex import W
 
 
 def plot_contours(ax, z_data, levels, cmap: str = "binary"):
@@ -118,7 +120,31 @@ def main(args):
             osp.join(layer_output_dir, f"layer_{layer_idx}_smoothed.png")
         )
 
-    # Plot contours
+        result = 255 * result.astype(np.uint8)
+        contours, _ = cv2.findContours(result, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # cv2.imwrite(
+        #     osp.join(layer_output_dir, f"layer_{layer_idx}_contours.jpg"),
+        #     cv2.drawContours(
+        #         cv2.cvtColor(result, cv2.COLOR_GRAY2RGB), contours, -1, (0, 255, 0), 3,
+        #     ),
+        # )
+        # Normalize to range 0:1
+        layer_shapes = []
+        for contour in contours:
+            c = np.squeeze(contour, axis=1).astype(np.float32)
+            c[:, 0] /= result.shape[1]
+            c[:, 1] /= result.shape[0]
+            layer_shapes.append({"vertices": c.tolist()})
+
+        with open(
+            osp.join(layer_output_dir, f"layer_{layer_idx}_contours.json"), "w"
+        ) as f:
+
+            json.dump(
+                layer_shapes, f,
+            )
+
+    # Plot yo woman's curves
     plt.figure()
     ax = plt.axes(projection="3d")
     plot_contours(ax=ax, z_data=depth_grid_quant, levels=args.levels, cmap="viridis")
