@@ -29,6 +29,13 @@ Regular             |  Inverted
 :-------------------------:|:-------------------------:
 ![reg](output/contour_plots/separated_contours.jpg)  |  ![inverted](output/contour_plots/separated_contours_inverted.jpg)
 
+Isolated Masks for each quantized layer:
+
+ a | Layer 0 | Layer 1 | Layer 2
+:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:
+quantized layer before smoothing | ![layer](output/contour_plots/layer_masks/layer_0.png) | ![layer](output/contour_plots/layer_masks/layer_1.png) | ![layer](output/contour_plots/layer_masks/layer_2.png)
+quantized layer after smoothing | ![layer](output/contour_plots/layer_masks/layer_0_smoothed.png) | ![layer](output/contour_plots/layer_masks/layer_1_smoothed.png) | ![layer](output/contour_plots/layer_masks/layer_2_smoothed.png)
+
 ## Raw Depth Visualization
 
 Regular             |  Inverted

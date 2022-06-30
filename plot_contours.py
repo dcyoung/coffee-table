@@ -1,9 +1,10 @@
 import os
 import os.path as osp
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import PIL
+from PIL import Image, ImageFilter
 
 
 def plot_contours(ax, z_data, levels, cmap: str = "binary"):
@@ -51,7 +52,7 @@ def main(args):
 
     # Raw depth map image
     # yields a grayscale image w/ pixel values in range 0-255 corresponding to 0-max-depth)
-    depth_map_im_raw = PIL.Image.fromarray((255.0 * depth_grid_norm).astype(np.uint8))
+    depth_map_im_raw = Image.fromarray((255.0 * depth_grid_norm).astype(np.uint8))
     depth_map_im_raw.save(osp.join(output_dir, "depth_map_raw.png"))
 
     plt.figure()
@@ -77,19 +78,45 @@ def main(args):
     )
     # Convert from pixel range 0-255 back to depth range 0-max_depth
     depth_grid_quant *= max_depth_m / 255.0
+    quantized_depth_values = sorted(list(np.unique(depth_grid_quant)))
+
     # Plot quantized heatmap
     plt.figure()
     p = plt.imshow(depth_grid_quant)
     clb = plt.colorbar(p)
     clb.ax.set_title("Water Depth (m)", fontsize=8)
-    rounded_depths = [round(z, 2) for z in list(np.unique(depth_grid_quant))]
-    plt.title(f"Quantized Depth Map: {args.levels} depths\n{rounded_depths}m")
+    plt.title(
+        f"Quantized Depth Map: {args.levels} depths\n{[round(z, 2) for z in quantized_depth_values]}m"
+    )
     plt.xlabel("X (100 m)")
     plt.ylabel("Y (100 m)")
     plt.savefig(
         osp.join(output_dir, "depth_map_quantized_plot.png"), dpi=1000,
     )
     plt.close()
+
+    # Create masks for the layers
+    layer_output_dir = osp.join(output_dir, "layer_masks")
+    os.makedirs(layer_output_dir, exist_ok=True)
+    for layer_idx, layer_depth in enumerate(quantized_depth_values[1:]):
+        layer_mask = depth_grid_quant >= layer_depth
+        layer_mask_im = Image.fromarray(255 * layer_mask.astype(np.uint8))
+        layer_mask_im.save(osp.join(layer_output_dir, f"layer_{layer_idx}.png"))
+
+        wip = layer_mask.astype(np.uint8) * 255
+        # Scale up
+        scale_up_factor = 4
+        for i in range(scale_up_factor // 2):
+            wip = cv2.pyrUp(wip)
+        for i in range(15):
+            wip = cv2.medianBlur(wip, 7)
+        for i in range(scale_up_factor // 2):
+            wip = cv2.pyrDown(wip)
+        # Threshold back
+        result = wip >= 128
+        Image.fromarray(result).save(
+            osp.join(layer_output_dir, f"layer_{layer_idx}_smoothed.png")
+        )
 
     # Plot contours
     plt.figure()
