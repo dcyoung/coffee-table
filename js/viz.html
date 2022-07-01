@@ -19,29 +19,39 @@
 			"three": "https://unpkg.com/three@0.142.0/build/three.module.js"
 		  }
 		}
-	  </script>
+	</script>
 	<script type="module">
 		import * as THREE from 'three';
 		import { OrbitControls } from 'https://unpkg.com/three@0.142.0/examples/jsm/controls/OrbitControls.js';
-		import { Lut } from 'https://unpkg.com/three@0.142.0/examples/jsm/math/Lut.js';
+		import { mergeBufferGeometries } from 'https://unpkg.com/three@0.142.0/examples/jsm/utils/BufferGeometryUtils.js';
+		// import { CSG } from 'three-csg-ts';
+		import{BufferAttribute,BufferGeometry,Matrix3,Matrix4,Mesh,Vector3}from"three";export class Vertex{constructor(t,o,e,r){this.pos=(new Vector).copy(t),this.normal=(new Vector).copy(o),this.uv=(new Vector).copy(e),this.uv.z=0,r&&(this.color=(new Vector).copy(r))}clone(){return new Vertex(this.pos,this.normal,this.uv,this.color)}flip(){this.normal.negate()}interpolate(t,o){return new Vertex(this.pos.clone().lerp(t.pos,o),this.normal.clone().lerp(t.normal,o),this.uv.clone().lerp(t.uv,o),this.color&&t.color&&this.color.clone().lerp(t.color,o))}}export class Vector{constructor(t=0,o=0,e=0){this.x=t,this.y=o,this.z=e}copy(t){return this.x=t.x,this.y=t.y,this.z=t.z,this}clone(){return new Vector(this.x,this.y,this.z)}negate(){return this.x*=-1,this.y*=-1,this.z*=-1,this}add(t){return this.x+=t.x,this.y+=t.y,this.z+=t.z,this}sub(t){return this.x-=t.x,this.y-=t.y,this.z-=t.z,this}times(t){return this.x*=t,this.y*=t,this.z*=t,this}dividedBy(t){return this.x/=t,this.y/=t,this.z/=t,this}lerp(t,o){return this.add((new Vector).copy(t).sub(this).times(o))}unit(){return this.dividedBy(this.length())}length(){return Math.sqrt(Math.pow(this.x,2)+Math.pow(this.y,2)+Math.pow(this.z,2))}normalize(){return this.unit()}cross(t){const o=this.clone(),e=o.x,r=o.y,s=o.z,n=t.x,i=t.y,l=t.z;return this.x=r*l-s*i,this.y=s*n-e*l,this.z=e*i-r*n,this}dot(t){return this.x*t.x+this.y*t.y+this.z*t.z}toVector3(){return new Vector3(this.x,this.y,this.z)}}export class Polygon{constructor(t,o){this.vertices=t,this.shared=o,this.plane=Plane.fromPoints(t[0].pos,t[1].pos,t[2].pos)}clone(){return new Polygon(this.vertices.map((t=>t.clone())),this.shared)}flip(){this.vertices.reverse().map((t=>t.flip())),this.plane.flip()}}export class Plane{constructor(t,o){this.normal=t,this.w=o,this.normal=t,this.w=o}clone(){return new Plane(this.normal.clone(),this.w)}flip(){this.normal.negate(),this.w=-this.w}splitPolygon(t,o,e,r,s){let n=0;const i=[];for(let o=0;o<t.vertices.length;o++){const e=this.normal.dot(t.vertices[o].pos)-this.w,r=e<-Plane.EPSILON?2:e>Plane.EPSILON?1:0;n|=r,i.push(r)}switch(n){case 0:(this.normal.dot(t.plane.normal)>0?o:e).push(t);break;case 1:r.push(t);break;case 2:s.push(t);break;case 3:{const o=[],e=[];for(let r=0;r<t.vertices.length;r++){const s=(r+1)%t.vertices.length,n=i[r],l=i[s],a=t.vertices[r],h=t.vertices[s];if(2!=n&&o.push(a),1!=n&&e.push(2!=n?a.clone():a),3==(n|l)){const t=(this.w-this.normal.dot(a.pos))/this.normal.dot((new Vector).copy(h.pos).sub(a.pos)),r=a.interpolate(h,t);o.push(r),e.push(r.clone())}}o.length>=3&&r.push(new Polygon(o,t.shared)),e.length>=3&&s.push(new Polygon(e,t.shared));break}}}static fromPoints(t,o,e){const r=(new Vector).copy(o).sub(t).cross((new Vector).copy(e).sub(t)).normalize();return new Plane(r.clone(),r.dot(t))}}Plane.EPSILON=1e-5;export class Node{constructor(t){this.plane=null,this.front=null,this.back=null,this.polygons=[],t&&this.build(t)}clone(){const t=new Node;return t.plane=this.plane&&this.plane.clone(),t.front=this.front&&this.front.clone(),t.back=this.back&&this.back.clone(),t.polygons=this.polygons.map((t=>t.clone())),t}invert(){for(let t=0;t<this.polygons.length;t++)this.polygons[t].flip();this.plane&&this.plane.flip(),this.front&&this.front.invert(),this.back&&this.back.invert();const t=this.front;this.front=this.back,this.back=t}clipPolygons(t){if(!this.plane)return t.slice();let o=new Array,e=new Array;for(let r=0;r<t.length;r++)this.plane.splitPolygon(t[r],o,e,o,e);return this.front&&(o=this.front.clipPolygons(o)),e=this.back?this.back.clipPolygons(e):[],o.concat(e)}clipTo(t){this.polygons=t.clipPolygons(this.polygons),this.front&&this.front.clipTo(t),this.back&&this.back.clipTo(t)}allPolygons(){let t=this.polygons.slice();return this.front&&(t=t.concat(this.front.allPolygons())),this.back&&(t=t.concat(this.back.allPolygons())),t}build(t){if(!t.length)return;this.plane||(this.plane=t[0].plane.clone());const o=[],e=[];for(let r=0;r<t.length;r++)this.plane.splitPolygon(t[r],this.polygons,this.polygons,o,e);o.length&&(this.front||(this.front=new Node),this.front.build(o)),e.length&&(this.back||(this.back=new Node),this.back.build(e))}}export class NBuf3{constructor(t){this.top=0,this.array=new Float32Array(t)}write(t){this.array[this.top++]=t.x,this.array[this.top++]=t.y,this.array[this.top++]=t.z}}export class NBuf2{constructor(t){this.top=0,this.array=new Float32Array(t)}write(t){this.array[this.top++]=t.x,this.array[this.top++]=t.y}}export class CSG{constructor(){this.polygons=new Array}static fromPolygons(t){const o=new CSG;return o.polygons=t,o}static fromGeometry(t,o){let e=[];const r=t.attributes.position,s=t.attributes.normal,n=t.attributes.uv,i=t.attributes.color,l=t.groups;let a;if(t.index)a=t.index.array;else{a=new Array(r.array.length/r.itemSize|0);for(let t=0;t<a.length;t++)a[t]=t}const h=a.length/3|0;e=new Array(h);for(let t=0,h=0,c=a.length;t<c;t+=3,h++){const c=new Array(3);for(let o=0;o<3;o++){const e=a[t+o],l=3*e,h=2*e,p=r.array[l],y=r.array[l+1],u=r.array[l+2],f=s.array[l],g=s.array[l+1],w=s.array[l+2],m=null==n?void 0:n.array[h],d=null==n?void 0:n.array[h+1];c[o]=new Vertex(new Vector(p,y,u),new Vector(f,g,w),new Vector(m,d,0),i&&new Vector(i.array[h],i.array[h+1],i.array[h+2]))}if(void 0===o&&l&&l.length>0)for(const o of l)a[t]>=o.start&&a[t]<o.start+o.count&&(e[h]=new Polygon(c,o.materialIndex));else e[h]=new Polygon(c,o)}return CSG.fromPolygons(e.filter((t=>!isNaN(t.plane.normal.x))))}static toGeometry(t,o){let e=0;const r=t.polygons;for(const t of r)e+=t.vertices.length-2;const s=new BufferGeometry,n=new NBuf3(3*e*3),i=new NBuf3(3*e*3),l=new NBuf2(2*e*3);let a;const h=[],c=[];for(const t of r){const o=t.vertices,r=o.length;void 0!==t.shared&&(h[t.shared]||(h[t.shared]=[])),r&&void 0!==o[0].color&&(a||(a=new NBuf3(3*e*3)));for(let e=3;e<=r;e++){(void 0===t.shared?c:h[t.shared]).push(n.top/3,n.top/3+1,n.top/3+2),n.write(o[0].pos),n.write(o[e-2].pos),n.write(o[e-1].pos),i.write(o[0].normal),i.write(o[e-2].normal),i.write(o[e-1].normal),l&&(l.write(o[0].uv),l.write(o[e-2].uv),l.write(o[e-1].uv)),a&&(a.write(o[0].color),a.write(o[e-2].color),a.write(o[e-1].color))}}s.setAttribute("position",new BufferAttribute(n.array,3)),s.setAttribute("normal",new BufferAttribute(i.array,3)),l&&s.setAttribute("uv",new BufferAttribute(l.array,2)),a&&s.setAttribute("color",new BufferAttribute(a.array,3));for(let t=0;t<h.length;t++)void 0===h[t]&&(h[t]=[]);if(h.length){let t=[],o=0;for(let e=0;e<h.length;e++)s.addGroup(o,h[e].length,e),o+=h[e].length,t=t.concat(h[e]);s.addGroup(o,c.length,h.length),t=t.concat(c),s.setIndex(t)}const p=(new Matrix4).copy(o).invert();return s.applyMatrix4(p),s.computeBoundingSphere(),s.computeBoundingBox(),s}static fromMesh(t,o){const e=CSG.fromGeometry(t.geometry,o),r=new Vector3,s=new Matrix3;s.getNormalMatrix(t.matrix);for(let o=0;o<e.polygons.length;o++){const n=e.polygons[o];for(let o=0;o<n.vertices.length;o++){const e=n.vertices[o];e.pos.copy(r.copy(e.pos.toVector3()).applyMatrix4(t.matrix)),e.normal.copy(r.copy(e.normal.toVector3()).applyMatrix3(s))}}return e}static toMesh(t,o,e){const r=CSG.toGeometry(t,o),s=new Mesh(r,e);return s.matrix.copy(o),s.matrix.decompose(s.position,s.quaternion,s.scale),s.rotation.setFromQuaternion(s.quaternion),s.updateMatrixWorld(),s.castShadow=s.receiveShadow=!0,s}static union(t,o){const e=CSG.fromMesh(t),r=CSG.fromMesh(o);return CSG.toMesh(e.union(r),t.matrix,t.material)}static subtract(t,o){const e=CSG.fromMesh(t),r=CSG.fromMesh(o);return CSG.toMesh(e.subtract(r),t.matrix,t.material)}static intersect(t,o){const e=CSG.fromMesh(t),r=CSG.fromMesh(o);return CSG.toMesh(e.intersect(r),t.matrix,t.material)}clone(){const t=new CSG;return t.polygons=this.polygons.map((t=>t.clone())).filter((t=>Number.isFinite(t.plane.w))),t}toPolygons(){return this.polygons}union(t){const o=new Node(this.clone().polygons),e=new Node(t.clone().polygons);return o.clipTo(e),e.clipTo(o),e.invert(),e.clipTo(o),e.invert(),o.build(e.allPolygons()),CSG.fromPolygons(o.allPolygons())}subtract(t){const o=new Node(this.clone().polygons),e=new Node(t.clone().polygons);return o.invert(),o.clipTo(e),e.clipTo(o),e.invert(),e.clipTo(o),e.invert(),o.build(e.allPolygons()),o.invert(),CSG.fromPolygons(o.allPolygons())}intersect(t){const o=new Node(this.clone().polygons),e=new Node(t.clone().polygons);return o.invert(),e.clipTo(o),e.invert(),o.clipTo(e),e.clipTo(o),o.build(e.allPolygons()),o.invert(),CSG.fromPolygons(o.allPolygons())}inverse(){const t=this.clone();for(const o of t.polygons)o.flip();return t}toMesh(t,o){return CSG.toMesh(this,t,o)}toGeometry(t){return CSG.toGeometry(this,t)}}
 
 		const scene = new THREE.Scene();
-		scene.background = new THREE.Color(0x000000);
 		const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+		camera.position.x = -0.75;
+		camera.position.y = 0.5;
+		camera.position.z = 0.5;
 
 		const renderer = new THREE.WebGLRenderer();
 		renderer.physicallyCorrectLights = true;
 		renderer.toneMapping = THREE.ACESFilmicToneMapping;
+		// renderer.toneMapping = THREE.ReinhardToneMapping;
+		// renderer.toneMappingExposure = 1;
+		renderer.outputEncoding = THREE.sRGBEncoding;
+		renderer.exposure = 1.0;
 		renderer.setSize(window.innerWidth, window.innerHeight);
 		document.body.appendChild(renderer.domElement);
+		function onWindowResize() {
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		}
+		window.addEventListener('resize', onWindowResize, false);
 
-		const geometry = new THREE.BoxGeometry(1, 1, 1);
-		const layers = new THREE.Group();
-		scene.add(layers);
-		camera.position.z = 1;
-		camera.lookAt(0, 0, 0);
+		// Controls 
 		const controls = new OrbitControls(camera, renderer.domElement);
 
+		// Environment setup
 		THREE.DefaultLoadingManager.onLoad = function () {
 			pmremGenerator.dispose();
 		};
@@ -56,7 +66,28 @@
 			});
 		const pmremGenerator = new THREE.PMREMGenerator(renderer);
 		pmremGenerator.compileCubemapShader();
+		scene.background = cubeMap;
 
+		// // Lights
+		// const light = new THREE.PointLight( 0xff0000, 1, 100 );
+		// light.position.set( 5, 5, 5 );
+		// scene.add( light );
+
+		// const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+		// scene.add( directionalLight );
+
+		// Materials
+		const tableTextureLoader = new THREE.TextureLoader().setPath("textures/concrete_floor_worn_001/");
+		const tableMaterial = new THREE.MeshStandardMaterial();
+		tableMaterial.envMap = cubeMap;
+		tableMaterial.envMapIntensity = 2.0;
+		const tableDiffMap = tableTextureLoader.load("diff_4k.jpg");
+		tableDiffMap.encoding = THREE.sRGBEncoding;
+		tableMaterial.map = tableDiffMap;
+		tableMaterial.metalnessMap = tableMaterial.roughnessMap = tableTextureLoader.load("arm_4k.jpg");
+		tableMaterial.normalMap = tableTextureLoader.load("nor_gl_4k.jpg");
+
+		// Glass material
 		const glassMaterial = new THREE.MeshPhysicalMaterial(
 			{
 				thickness: 0.0,
@@ -73,52 +104,82 @@
 		);
 		glassMaterial.envMap = cubeRenderTarget;
 		glassMaterial.needsUpdate = true;
-		scene.background = cubeMap;
+
+		// Layers setup
+		const layerMeshes = []
+		const contourGeometriesByLayer = []
+		const extrudeSettings = {
+			steps: 1,
+			depth: 0.01,
+			bevelEnabled: false,
+		};
+
+		function shapeFromVerts(vertices) {
+			const vRoot = vertices[0];
+			const shape = new THREE.Shape();
+			shape.moveTo(vRoot[0], vRoot[1]);
+			for (const v of vertices.slice(1)) {
+				shape.lineTo(v[0], v[1]);
+			}
+			shape.lineTo(vRoot[0], vRoot[1]);
+			return shape;
+		}
+		for (const layerIdx of [0, 1, 2]) {
+			const response = await fetch(`../output/contour_plots/layer_masks/layer_${layerIdx}_contours.json`);
+			const contours = await response.json();
+			const contourGeometries = [];
+			for (const contour of contours) {
+				const shape = shapeFromVerts(contour.vertices);
+				for (const h of contour.holes) {
+					shape.holes.push(shapeFromVerts(h.vertices));
+				}
+
+				const contourGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+				// Center and offset for layer index
+				contourGeometry.translate(-0.5, -0.5, layerIdx * extrudeSettings.depth);
+				contourGeometries.push(contourGeometry);
+			}
+			contourGeometriesByLayer.push(contourGeometries);
+		}
+
+		const bathymetryGeometry = mergeBufferGeometries(contourGeometriesByLayer.flat());
+		const bathymetryMesh = new THREE.Mesh(bathymetryGeometry, glassMaterial);
+		bathymetryMesh.rotation.x = Math.PI / 2;
+		scene.add(bathymetryMesh);
+
+		// Table body setup
+		const tableLongDim = 1;
+		const tableShortDim = 0.75 * tableLongDim;
+		const tableHeight = tableLongDim / 12;
+		const tableGeometry = new THREE.BoxGeometry(tableShortDim, tableHeight, tableLongDim);
+		const tableBodyPreCut = new THREE.Mesh(tableGeometry, tableMaterial);
+		tableBodyPreCut.position.y = 1.01 * (-tableHeight / 2);
+		tableBodyPreCut.updateMatrix();
+		let tableBody;
+		for (const contourGeometries of contourGeometriesByLayer) {
+			const layerGeometry = mergeBufferGeometries(contourGeometries);
+			const layerMesh = new THREE.Mesh(layerGeometry, glassMaterial);
+			layerMesh.rotation.x = Math.PI / 2;
+			layerMesh.updateMatrix();
+			if (tableBody == 'undefined' || tableBody == null) {
+				tableBody = CSG.subtract(tableBodyPreCut, layerMesh);
+			}
+			else {
+				tableBody = CSG.subtract(tableBody, layerMesh);
+			}
+		}
+		scene.add(tableBody);
+
+		let clock = new THREE.Clock();
 
 		function animate() {
 			requestAnimationFrame(animate);
-
-			// layers.rotation.x += 0.01;
-			// layers.rotation.y += 0.01;
+			bathymetryMesh.position.y = 0.05 * (1 + Math.sin(0.5 * clock.getElapsedTime()));
 			renderer.render(scene, camera);
 		};
 
-		renderer.outputEncoding = THREE.sRGBEncoding;
-		renderer.exposure = 1.0;
-
 		animate();
 
-		const lut = new Lut('rainbow', 3);
-		for (const layerIdx of [0, 1, 2]) {
-			const extrudeSettings = {
-				steps: 1,
-				depth: 0.01,
-				bevelEnabled: false,
-			};
-			const layer = new THREE.Group();
-			fetch(`../output/contour_plots/layer_masks/layer_${layerIdx}_contours.json`)
-				.then(response => response.json())
-				.then(contours => {
-					for (const contour of contours) {
-						const vRoot = contour.vertices[0];
-						const shape = new THREE.Shape();
-						shape.moveTo(vRoot[0], vRoot[1]);
-						for (const v of contour.vertices.slice(1)) {
-							shape.lineTo(v[0], v[1]);
-						}
-						shape.lineTo(vRoot[0], vRoot[1]);
-						const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-						const mesh = new THREE.Mesh(geometry, glassMaterial);
-						// Center and offset for layer index
-						mesh.position.x = -0.5;
-						mesh.position.y = -0.5;
-						mesh.position.z = layerIdx * extrudeSettings.depth;
-						layer.add(mesh);
-					}
-				})
-			layer.rotation.x = Math.PI / 2;
-			layers.add(layer);
-		}
 	</script>
 </body>
 

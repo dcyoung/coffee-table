@@ -10,6 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "canvas": "^2.9.3",
-    "rgbquant": "^1.1.2"
+    "rgbquant": "^1.1.2",
+    "three": "^0.142.0",
+    "three-csg-ts": "^3.1.10"
   }
 }

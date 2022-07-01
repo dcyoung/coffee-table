@@ -121,21 +121,34 @@ def main(args):
         )
 
         result = 255 * result.astype(np.uint8)
-        contours, _ = cv2.findContours(result, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        # cv2.imwrite(
-        #     osp.join(layer_output_dir, f"layer_{layer_idx}_contours.jpg"),
-        #     cv2.drawContours(
-        #         cv2.cvtColor(result, cv2.COLOR_GRAY2RGB), contours, -1, (0, 255, 0), 3,
-        #     ),
-        # )
+        contours, hierarchy = cv2.findContours(
+            result, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+        )
         # Normalize to range 0:1
         layer_shapes = []
-        for contour in contours:
-            c = np.squeeze(contour, axis=1).astype(np.float32)
-            c[:, 0] /= result.shape[1]
-            c[:, 1] /= result.shape[0]
-            layer_shapes.append({"vertices": c.tolist()})
+        for top_level_contour_idx in [
+            c_idx for c_idx in range(hierarchy.shape[1]) if hierarchy[0][c_idx][3] == -1
+        ]:
 
+            def get_verts(contour_index: int):
+                c = np.squeeze(contours[contour_index], axis=1).astype(np.float32)
+                c[:, 0] /= result.shape[1]
+                c[:, 1] /= result.shape[0]
+                return c.tolist()
+
+            # identify contours which represent holes in this contour
+            hole_indices = [
+                c_idx
+                for c_idx in range(hierarchy.shape[1])
+                if hierarchy[0][c_idx][3] == top_level_contour_idx
+            ]
+
+            layer_shapes.append(
+                {
+                    "vertices": get_verts(top_level_contour_idx),
+                    "holes": [{"vertices": get_verts(h_idx)} for h_idx in hole_indices],
+                }
+            )
         with open(
             osp.join(layer_output_dir, f"layer_{layer_idx}_contours.json"), "w"
         ) as f:
@@ -143,8 +156,32 @@ def main(args):
             json.dump(
                 layer_shapes, f,
             )
+        cv2.imwrite(
+            osp.join(layer_output_dir, f"layer_{layer_idx}_contours.jpg"),
+            cv2.drawContours(
+                cv2.drawContours(
+                    cv2.cvtColor(result, cv2.COLOR_GRAY2RGB),
+                    [
+                        contours[c_idx]
+                        for c_idx in range(hierarchy.shape[1])
+                        if hierarchy[0][c_idx][3] == -1
+                    ],
+                    -1,
+                    (0, 255, 0),
+                    3,
+                ),
+                [
+                    contours[c_idx]
+                    for c_idx in range(hierarchy.shape[1])
+                    if hierarchy[0][c_idx][3] != -1
+                ],
+                -1,
+                (255, 0, 0),
+                3,
+            ),
+        )
 
-    # Plot yo woman's curves
+    # Plot contours
     plt.figure()
     ax = plt.axes(projection="3d")
     plot_contours(ax=ax, z_data=depth_grid_quant, levels=args.levels, cmap="viridis")
