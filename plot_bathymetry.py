@@ -10,6 +10,8 @@ def _plot_histogram(data):
     # plot
     plt.hist(data)
     plt.title("Depth Readings Histogram (m)")
+    plt.ylabel("# of depth readings")
+    plt.xlabel("Water depth (m)")
     fig.tight_layout()
     return fig
 
@@ -121,7 +123,7 @@ def main(args):
     os.makedirs(args.output, exist_ok=True)
 
     print("Creating histogram...")
-    fig = _plot_histogram(depth_grid)
+    fig = _plot_histogram(depth_grid.flatten())
     plt.savefig(osp.join(args.output, "histogram.jpg"))
     plt.close()
 

@@ -5,8 +5,8 @@ import os.path as osp
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image, ImageFilter
-from regex import W
+from PIL import Image
+from scipy import stats
 
 
 def plot_contours(ax, z_data, levels, cmap: str = "binary"):
@@ -41,6 +41,14 @@ def main(args):
     depth_grid = np.clip(depth_grid, a_min=depth_clip_min_cm, a_max=depth_clip_max_cm)
     depth_grid -= depth_grid.min()
 
+    # Clip/remove/smooth any outliers (depth readings more than a configurable number of std-devs away from the mean)
+    # x = µ + Zσ
+    depth_clip_max_cm = np.mean(depth_grid, axis=None) + args.max_z_score * stats.tstd(
+        depth_grid, axis=None
+    )
+    print(f"Clipping data to a max depth of {round(0.01*depth_clip_max_cm, 1)}m")
+    depth_grid = np.clip(depth_grid, a_min=0, a_max=depth_clip_max_cm)
+
     max_depth_cm = depth_grid.max()
     max_depth_m = max_depth_cm * 0.01
 
@@ -70,15 +78,42 @@ def main(args):
     plt.close()
 
     # Quantize depth map
-    depth_map_im_quant = depth_map_im_raw.quantize(args.levels)
+    # Older method... producing pretty but randomly spaced intervals
+    # depth_map_im_quant = depth_map_im_raw.quantize(args.levels)
+
+    # New method, producing evenly spaced intervals starting from a depth of 1m
+    if args.quantize_depth_start_m >= 0:
+        discrete_values = np.insert(
+            np.linspace(
+                args.quantize_depth_start_m / max_depth_m,
+                1,
+                args.levels - 1,
+                dtype=np.float32,
+            ),
+            0,
+            0,
+        )
+    else:
+        discrete_values = np.linspace(0, 1, args.levels, dtype=np.float32), 0, 0
+    print(
+        f"Quantizing w/ {args.levels} discrete depth values: {[round(max_depth_m*z, 1) for z in discrete_values]}m"
+    )
+    depth_grid_norm_quant = np.zeros_like(depth_grid_norm)
+    for y in range(depth_grid_norm.shape[0]):
+        depth_grid_norm_quant[y] = discrete_values[
+            abs(depth_grid_norm[y, :] - discrete_values[:, None]).argmin(axis=0)
+        ]
+    depth_map_im_quant = Image.fromarray(
+        (255.0 * depth_grid_norm_quant).astype(np.uint8)
+    )
     depth_map_im_quant.save(osp.join(output_dir, "depth_map_quantized.png"))
 
     # Convert image back to data
-    # Convert back to RGB to avoid reduced colormap issues, and reduce back to 1 channel
+    # # Convert back to RGB to avoid reduced colormap issues, and reduce back to 1 channel
     depth_grid_quant = np.array(depth_map_im_quant.convert("RGB"))[:, :, 0].astype(
         np.float32
     )
-    # Convert from pixel range 0-255 back to depth range 0-max_depth
+    # # Convert from pixel range 0-255 back to depth range 0-max_depth
     depth_grid_quant *= max_depth_m / 255.0
     quantized_depth_values = sorted(list(np.unique(depth_grid_quant)))
 
@@ -88,7 +123,7 @@ def main(args):
     clb = plt.colorbar(p)
     clb.ax.set_title("Water Depth (m)", fontsize=8)
     plt.title(
-        f"Quantized Depth Map: {args.levels} depths\n{[round(z, 2) for z in quantized_depth_values]}m"
+        f"Quantized Depth Map: {args.levels} depths\n{[round(z, 1) for z in quantized_depth_values]}m"
     )
     plt.xlabel("X (100 m)")
     plt.ylabel("Y (100 m)")
@@ -221,7 +256,19 @@ if __name__ == "__main__":
         "--levels",
         type=int,
         default=4,
+        help="The number of evenly spaced contour levels. This includes the depth-0 contour. ie: N levels will correspond to N-1 output layers.",
+    )
+    parser.add_argument(
+        "--max_z_score",
+        type=float,
+        default=5,
         help="The number of evenly spaced contour levels.",
+    )
+    parser.add_argument(
+        "--quantize_depth_start_m",
+        type=float,
+        default=1.0,
+        help="The starting depth for the first layer... beyond which subsequent layers will be evenly spaced. This helps to visualize shallow depths when overall water depth range is high.",
     )
     args = parser.parse_args()
 

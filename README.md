@@ -18,7 +18,7 @@ The distribution of depth values is not uniform. That is to say, there are outli
 
 ![depth-histogram](output/bathymetry_plots/histogram.jpg)
 
-In order to create more meaningful contours, the depth data is quantized to better smooth the raw data for the purposes of this project.
+In order to create more meaningful contours, the depth data is clipped (outliers removed) and quantized to better smooth the raw data for the purposes of this project.
 
 Raw             |  Quantized
 :-------------------------:|:-------------------------:

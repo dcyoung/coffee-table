@@ -4,3 +4,5 @@ numpy
 matplotlib
 pillow
 tqdm
+scikit-learn
+opencv-python-headless

@@ -9,3 +9,4 @@ dependencies:
     - pillow
     - pip:
         - opencv-python-headless
+        - scikit-learn
