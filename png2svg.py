@@ -17,10 +17,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=str, default=None, help="path to an image file")
     parser.add_argument(
-        "--output",
-        type=str,
-        default=None,
-        help="Path to write output svg.",
+        "--output", type=str, default=None, help="Path to write output svg.",
     )
     args = parser.parse_args()
 

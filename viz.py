@@ -3,9 +3,15 @@ import numpy as np
 
 
 def _plot_histogram(data):
+    data_mean = np.mean(data, axis=None)
+    data_std = np.std(data, axis=None)
     fig = plt.figure()
     # plot
-    plt.hist(data)
+    plt.hist(data, color="c", edgecolor="k")
+    plt.axvline(data_mean, color="k", linestyle="dashed")
+    for i in range(3):
+        plt.axvline(data_mean + (i + 1) * data_std, color="y", linestyle="dashed")
+
     plt.title("Depth Readings Histogram (m)")
     plt.ylabel("# of depth readings")
     plt.xlabel("Water depth (m)")

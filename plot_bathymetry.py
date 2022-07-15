@@ -19,6 +19,7 @@ def main(args):
     print("Loading data...")
     depth_grid = load_data(
         fpath=args.input,
+        depth_unit_m=args.depth_unit_m,
         depth_min_m=args.depth_min_m,
         depth_max_m=args.depth_max_m,
         max_z_score=args.max_z_score,
@@ -98,14 +99,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input",
         type=str,
-        default=osp.join("resources", "bathymetry", "FullBay100", "msl1k.asc"),
-        help="Path to GIS ASCII data file.",
+        required=True,
+        help="Path to GIS ASCII, of GeoTiff data file.",
     )
     parser.add_argument(
         "--cell_size_m",
         type=int,
-        default=100,
+        required=True,
         help="The resolution of x,y readings in m.",
+    )
+    parser.add_argument(
+        "--depth_unit_m",
+        type=float,
+        required=True,
+        help="The resolution of z readings in m.",
     )
     parser.add_argument(
         "--depth_min_m",

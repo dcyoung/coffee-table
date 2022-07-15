@@ -11,13 +11,14 @@ from PIL import Image
 from tqdm import tqdm
 
 from data_helpers import load_data
-from viz import _plot_depth_3D_as_contours
+from viz import _plot_depth_3D_as_contours, _plot_histogram
 
 
 def main(args):
     print("Loading data...")
     depth_grid = load_data(
         fpath=args.input,
+        depth_unit_m=args.depth_unit_m,
         depth_min_m=args.depth_min_m,
         depth_max_m=args.depth_max_m,
         max_z_score=args.max_z_score,
@@ -32,6 +33,11 @@ def main(args):
     output_dir = args.output
     os.makedirs(output_dir, exist_ok=True)
 
+    # Histogram
+    fig = _plot_histogram(depth_grid.flatten())
+    plt.savefig(osp.join(args.output, "histogram.jpg"))
+    plt.close()
+
     # Raw depth map image
     # yields a grayscale image w/ pixel values in range 0-255 corresponding to 0-max-depth)
     depth_map_im_raw = Image.fromarray((255.0 * depth_grid_norm).astype(np.uint8))
@@ -42,11 +48,10 @@ def main(args):
     clb = plt.colorbar(p)
     clb.ax.set_title("Water Depth (m)", fontsize=8)
     plt.title("Raw Depth Map")
-    plt.xlabel("X (100 m)")
-    plt.ylabel("Y (100 m)")
+    plt.xlabel(f"X ({args.cell_size_m} m)")
+    plt.ylabel(f"Y ({args.cell_size_m} m)")
     plt.savefig(
-        osp.join(output_dir, "depth_map_raw_plot.png"),
-        dpi=1000,
+        osp.join(output_dir, "depth_map_raw_plot.png"), dpi=1000,
     )
     plt.close()
 
@@ -112,11 +117,10 @@ def main(args):
     plt.title(
         f"Quantized Depth Map: {args.levels} depths\n{[round(z, 1) for z in quantized_depth_values]}m"
     )
-    plt.xlabel("X (100 m)")
-    plt.ylabel("Y (100 m)")
+    plt.xlabel(f"X ({args.cell_size_m} m)")
+    plt.ylabel(f"Y ({args.cell_size_m} m)")
     plt.savefig(
-        osp.join(output_dir, "depth_map_quantized_plot.png"),
-        dpi=1000,
+        osp.join(output_dir, "depth_map_quantized_plot.png"), dpi=1000,
     )
     plt.close()
 
@@ -190,8 +194,7 @@ def main(args):
         ) as f:
 
             json.dump(
-                layer_shapes,
-                f,
+                layer_shapes, f,
             )
         cv2.imwrite(
             osp.join(layer_output_dir, f"layer_{layer_idx}_contours.jpg"),
@@ -248,14 +251,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input",
         type=str,
-        default=osp.join("resources", "bathymetry", "FullBay100", "msl1k.asc"),
-        help="Path to GIS ASCII data file.",
+        required=True,
+        help="Path to GIS ASCII, of GeoTiff data file.",
     )
     parser.add_argument(
         "--cell_size_m",
         type=int,
-        default=100,
+        required=True,
         help="The resolution of x,y readings in m.",
+    )
+    parser.add_argument(
+        "--depth_unit_m",
+        type=float,
+        required=True,
+        help="The resolution of z readings in m.",
     )
     parser.add_argument(
         "--depth_min_m",
@@ -272,7 +281,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max_z_score",
         type=float,
-        default=5,
+        default=0,
         help="The number of evenly spaced contour levels.",
     )
     parser.add_argument(

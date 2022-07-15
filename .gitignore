@@ -1,5 +1,6 @@
 .vscode/
 scratch.sh
+scratch.py
 resources/bathymetry/
 dev_out/
 
