@@ -4,116 +4,25 @@ import os.path as osp
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-def _plot_histogram(data):
-    fig = plt.figure()
-    # plot
-    plt.hist(data)
-    plt.title("Depth Readings Histogram (m)")
-    plt.ylabel("# of depth readings")
-    plt.xlabel("Water depth (m)")
-    fig.tight_layout()
-    return fig
-
-
-def _plot_depth_as_heat_map(data):
-    fig = plt.figure()
-    # plot
-    p = plt.imshow(data, cmap="hot", interpolation="nearest")
-    plt.title("Water Depth Heat Map")
-    plt.colorbar(p)
-    plt.xlabel("X (100 m)")
-    plt.ylabel("Y (100 m)")
-    fig.tight_layout()
-    return fig
-
-
-def _plot_depth_3D_as_height_map(data, title: str = "Water Depth - height map"):
-    x, y = np.meshgrid(range(data.shape[0]), range(data.shape[1]))
-
-    fig = plt.figure()
-    # plot
-    ax = fig.add_subplot(111, projection="3d")
-    ax.plot_surface(x, y, np.transpose(data))
-    plt.title(title)
-    ax.set_xlabel("X (100 m)")
-    ax.set_ylabel("Y (100 m)")
-    ax.set_zlabel("Z (m)")
-    ax.view_init(15, 35)
-    fig.tight_layout()
-    return fig
-
-
-def _plot_depth_3D_as_contours(
-    data, levels=None, title: str = "Water Depth - Contours"
-):
-    x, y = np.meshgrid(range(data.shape[0]), range(data.shape[1]))
-
-    fig = plt.figure()
-    # plot
-    ax = fig.add_subplot(111, projection="3d")
-    ax.contour3D(x, y, np.transpose(data), 50, cmap="binary", levels=levels)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
-    plt.title(title)
-    ax.set_xlabel("X (100 m)")
-    ax.set_ylabel("Y (100 m)")
-    ax.set_zlabel("Z (m)")
-    ax.view_init(30, 35)
-    fig.tight_layout()
-    return fig
-
-
-def _plot_depth_3D_wireframe(data, title: str = "Water Depth - Wireframe"):
-    x, y = np.meshgrid(range(data.shape[0]), range(data.shape[1]))
-
-    fig = plt.figure()
-    # plot
-    ax = plt.axes(projection="3d")
-    ax.plot_wireframe(x, y, np.transpose(data), color="black")
-    plt.title(title)
-    ax.set_xlabel("X (100 m)")
-    ax.set_ylabel("Y (100 m)")
-    ax.set_zlabel("Z (m)")
-    fig.tight_layout()
-    return fig
-
-
-def _plot_depth_3D_surface(data, title: str = "Water Depth - Surface"):
-    x, y = np.meshgrid(range(data.shape[0]), range(data.shape[1]))
-
-    fig = plt.figure()
-    # plot
-    ax = plt.axes(projection="3d")
-    ax.plot_surface(
-        x, y, np.transpose(data), rstride=1, cstride=1, cmap="viridis", edgecolor="none"
-    )
-    plt.title(title)
-    ax.set_xlabel("X (100 m)")
-    ax.set_ylabel("Y (100 m)")
-    ax.set_zlabel("Z (m)")
-    fig.tight_layout()
-    return fig
+from data_helpers import load_data
+from viz import (
+    _plot_depth_3D_as_contours,
+    _plot_depth_3D_as_height_map,
+    _plot_depth_3D_surface,
+    _plot_depth_3D_wireframe,
+    _plot_depth_as_heat_map,
+    _plot_histogram,
+)
 
 
 def main(args):
     print("Loading data...")
-    # data provided as a grid w/ 100m spacing, with z-depth values representing water depth
-    # Depth units are in cm, increasing positive depths. Negative values indicate intertidal.
-    depth_grid = np.loadtxt(args.input, skiprows=7)
-    depth_grid /= 100.0  # convert cm to meters
-
-    depth_clip_min_cm = 0
-    depth_clip_max_cm = None
-
-    # # Include intertidal:
-    # depth_grid -= depth_grid.min()
-    # depth_grid = np.clip(depth_grid, a_min=depth_clip_min_cm, a_max=depth_clip_max_cm)
-
-    # Ignore intertidal
-    depth_grid = np.clip(depth_grid, a_min=depth_clip_min_cm, a_max=depth_clip_max_cm)
-    depth_grid -= depth_grid.min()
+    depth_grid = load_data(
+        fpath=args.input,
+        depth_min_m=args.depth_min_m,
+        depth_max_m=args.depth_max_m,
+        max_z_score=args.max_z_score,
+    )
 
     print("Grid shape: {0}".format(depth_grid.shape))
     print(f"Max depth: {depth_grid.max()}m")
@@ -128,7 +37,7 @@ def main(args):
     plt.close()
 
     print("Creating heatmap...")
-    fig = _plot_depth_as_heat_map(depth_grid)
+    fig = _plot_depth_as_heat_map(depth_grid, cell_size_m=args.cell_size_m)
     plt.savefig(osp.join(args.output, "heatmap.jpg"))
     plt.close()
 
@@ -139,25 +48,35 @@ def main(args):
 
         print("Creating 3D contour plot...")
         fig = _plot_depth_3D_as_contours(
-            data, title=f"Water Depth Contours{title_suffix}"
+            data,
+            cell_size_m=args.cell_size_m,
+            title=f"Water Depth Contours{title_suffix}",
         )
         plt.savefig(osp.join(args.output, f"contours{fname_suffix}.jpg"))
         plt.close()
 
         print("Creating 3D wireframe plot...")
         fig = _plot_depth_3D_wireframe(
-            data, title=f"Water Depth Wireframe{title_suffix}"
+            data,
+            cell_size_m=args.cell_size_m,
+            title=f"Water Depth Wireframe{title_suffix}",
         )
         plt.savefig(osp.join(args.output, f"wireframe{fname_suffix}.jpg"))
         plt.close()
 
         print("Creating 3D heightmap plot...")
-        fig = _plot_depth_3D_as_height_map(data, title=f"Water Depthmap{title_suffix}")
+        fig = _plot_depth_3D_as_height_map(
+            data, cell_size_m=args.cell_size_m, title=f"Water Depthmap{title_suffix}"
+        )
         plt.savefig(osp.join(args.output, f"heightmap{fname_suffix}.jpg"))
         plt.close()
 
         print("Creating 3D surface plot...")
-        fig = _plot_depth_3D_surface(data, title=f"Water Depth Surface{title_suffix}")
+        fig = _plot_depth_3D_surface(
+            data,
+            cell_size_m=args.cell_size_m,
+            title=f"Water Depth Surface{title_suffix}",
+        )
         plt.savefig(osp.join(args.output, f"surface{fname_suffix}.jpg"))
         plt.close()
 
@@ -165,12 +84,46 @@ def main(args):
 if __name__ == "__main__":
     import argparse
 
+    def str2bool(v):
+        if isinstance(v, bool):
+            return v
+        if v.lower() in ("yes", "true", "t", "y", "1"):
+            return True
+        elif v.lower() in ("no", "false", "f", "n", "0"):
+            return False
+        else:
+            raise argparse.ArgumentTypeError("Boolean value expected.")
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--input",
         type=str,
         default=osp.join("resources", "bathymetry", "FullBay100", "msl1k.asc"),
         help="Path to GIS ASCII data file.",
+    )
+    parser.add_argument(
+        "--cell_size_m",
+        type=int,
+        default=100,
+        help="The resolution of x,y readings in m.",
+    )
+    parser.add_argument(
+        "--depth_min_m",
+        type=float,
+        default=0.0,
+        help="Min depth in meters, values will be clipped.",
+    )
+    parser.add_argument(
+        "--depth_max_m",
+        type=float,
+        default=None,
+        help="If provided and > 0, Max depth in meters, values will be clipped.",
+    )
+    parser.add_argument(
+        "--max_z_score",
+        type=float,
+        default=0,
+        help="The number of evenly spaced contour levels.",
     )
     parser.add_argument(
         "--output",

@@ -1,57 +1,29 @@
 import json
 import os
 import os.path as osp
+import subprocess
+from tempfile import NamedTemporaryFile
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-from scipy import stats
+from tqdm import tqdm
 
-
-def plot_contours(ax, z_data, levels, cmap: str = "binary"):
-    x, y = np.meshgrid(range(z_data.shape[0]), range(z_data.shape[1]))
-
-    # plot
-    ax.contourf3D(x, y, np.transpose(z_data), 50, cmap=cmap, levels=levels)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
-    ax.set_title(f"Depth as 3d contours. N-Levels={levels}")
-    ax.set_xlabel("X (100 m)")
-    ax.set_ylabel("Y (100 m)")
-    ax.set_zlabel("Z (m)")
-    ax.view_init(30, 45)
+from data_helpers import load_data
+from viz import _plot_depth_3D_as_contours
 
 
 def main(args):
     print("Loading data...")
-    # data provided as a grid w/ 100m spacing, with z-depth values representing water depth
-    # Depth units are in cm, increasing positive depths. Negative values indicate intertidal.
-    depth_grid = np.loadtxt(args.input, skiprows=7)
-
-    depth_clip_min_cm = 0
-    depth_clip_max_cm = None
-
-    # # Include intertidal:
-    # depth_grid -= depth_grid.min()
-    # depth_grid = np.clip(depth_grid, a_min=depth_clip_min_cm, a_max=depth_clip_max_cm)
-
-    # Ignore intertidal
-    depth_grid = np.clip(depth_grid, a_min=depth_clip_min_cm, a_max=depth_clip_max_cm)
-    depth_grid -= depth_grid.min()
-
-    # Clip/remove/smooth any outliers (depth readings more than a configurable number of std-devs away from the mean)
-    # x = µ + Zσ
-    depth_clip_max_cm = np.mean(depth_grid, axis=None) + args.max_z_score * stats.tstd(
-        depth_grid, axis=None
+    depth_grid = load_data(
+        fpath=args.input,
+        depth_min_m=args.depth_min_m,
+        depth_max_m=args.depth_max_m,
+        max_z_score=args.max_z_score,
     )
-    print(f"Clipping data to a max depth of {round(0.01*depth_clip_max_cm, 1)}m")
-    depth_grid = np.clip(depth_grid, a_min=0, a_max=depth_clip_max_cm)
 
-    max_depth_cm = depth_grid.max()
-    max_depth_m = max_depth_cm * 0.01
-
+    max_depth_m = depth_grid.max()
     depth_grid_norm = depth_grid / depth_grid.max()
 
     print(f"Max depth: {max_depth_m}m")
@@ -73,7 +45,8 @@ def main(args):
     plt.xlabel("X (100 m)")
     plt.ylabel("Y (100 m)")
     plt.savefig(
-        osp.join(output_dir, "depth_map_raw_plot.png"), dpi=1000,
+        osp.join(output_dir, "depth_map_raw_plot.png"),
+        dpi=1000,
     )
     plt.close()
 
@@ -81,11 +54,12 @@ def main(args):
     # Older method... producing pretty but randomly spaced intervals
     # depth_map_im_quant = depth_map_im_raw.quantize(args.levels)
 
-    # New method, producing evenly spaced intervals starting from a depth of 1m
+    # New method, producing evenly spaced intervals starting from a configurable depth
     if args.quantize_depth_start_m >= 0:
-        discrete_values = np.insert(
+        # Start from configurable depth... first guarantee it is clipped to a minimum quantizable value of 0.004
+        quantized_depth_values_norm = np.insert(
             np.linspace(
-                args.quantize_depth_start_m / max_depth_m,
+                max(args.quantize_depth_start_m / max_depth_m, 0.004),
                 1,
                 args.levels - 1,
                 dtype=np.float32,
@@ -94,14 +68,21 @@ def main(args):
             0,
         )
     else:
-        discrete_values = np.linspace(0, 1, args.levels, dtype=np.float32), 0, 0
+        # Start from depth 0
+        quantized_depth_values_norm = (
+            np.linspace(0, 1, args.levels, dtype=np.float32),
+            0,
+            0,
+        )
     print(
-        f"Quantizing w/ {args.levels} discrete depth values: {[round(max_depth_m*z, 1) for z in discrete_values]}m"
+        f"Quantizing w/ {args.levels} discrete depth values: {[round(max_depth_m*z, 1) for z in quantized_depth_values_norm]}m"
     )
     depth_grid_norm_quant = np.zeros_like(depth_grid_norm)
     for y in range(depth_grid_norm.shape[0]):
-        depth_grid_norm_quant[y] = discrete_values[
-            abs(depth_grid_norm[y, :] - discrete_values[:, None]).argmin(axis=0)
+        depth_grid_norm_quant[y] = quantized_depth_values_norm[
+            abs(depth_grid_norm[y, :] - quantized_depth_values_norm[:, None]).argmin(
+                axis=0
+            )
         ]
     depth_map_im_quant = Image.fromarray(
         (255.0 * depth_grid_norm_quant).astype(np.uint8)
@@ -115,8 +96,14 @@ def main(args):
     )
     # # Convert from pixel range 0-255 back to depth range 0-max_depth
     depth_grid_quant *= max_depth_m / 255.0
-    quantized_depth_values = sorted(list(np.unique(depth_grid_quant)))
 
+    quantized_depth_values = (
+        np.array((255.0 * quantized_depth_values_norm).astype(np.uint8)).astype(
+            np.float32
+        )
+        * max_depth_m
+        / 255.0
+    )
     # Plot quantized heatmap
     plt.figure()
     p = plt.imshow(depth_grid_quant)
@@ -128,34 +115,48 @@ def main(args):
     plt.xlabel("X (100 m)")
     plt.ylabel("Y (100 m)")
     plt.savefig(
-        osp.join(output_dir, "depth_map_quantized_plot.png"), dpi=1000,
+        osp.join(output_dir, "depth_map_quantized_plot.png"),
+        dpi=1000,
     )
     plt.close()
 
     # Create masks for the layers
     layer_output_dir = osp.join(output_dir, "layer_masks")
     os.makedirs(layer_output_dir, exist_ok=True)
-    for layer_idx, layer_depth in enumerate(quantized_depth_values[1:]):
+    for layer_idx, layer_depth in tqdm(enumerate(quantized_depth_values[1:])):
         layer_mask = depth_grid_quant >= layer_depth
         layer_mask_im = Image.fromarray(255 * layer_mask.astype(np.uint8))
         layer_mask_im.save(osp.join(layer_output_dir, f"layer_{layer_idx}.png"))
 
         wip = layer_mask.astype(np.uint8) * 255
         # Scale up
-        scale_up_factor = 4
-        for i in range(scale_up_factor // 2):
+        for i in range(args.scale_up_factor // 2):
             wip = cv2.pyrUp(wip)
         for i in range(15):
             wip = cv2.medianBlur(wip, 7)
-        for i in range(scale_up_factor // 2):
+        for i in range(args.scale_up_factor // 2):
             wip = cv2.pyrDown(wip)
         # Threshold back
         result = wip >= 128
-        Image.fromarray(result).save(
-            osp.join(layer_output_dir, f"layer_{layer_idx}_smoothed.png")
-        )
+        result = np.invert(result)
+        im_smoothed = Image.fromarray(result)
+        im_smoothed.save(osp.join(layer_output_dir, f"layer_{layer_idx}_smoothed.png"))
 
+        with NamedTemporaryFile("w", suffix=".pnm") as f:
+            im_smoothed.save(f.name)
+            subprocess.run(
+                [
+                    "potrace",
+                    f.name,
+                    "-s",
+                    "-o",
+                    osp.join(layer_output_dir, f"layer_{layer_idx}_smoothed.svg"),
+                ]
+            )
+
+        # Convert boolean arr to black/white image
         result = 255 * result.astype(np.uint8)
+        # Detect contours and save polygon info
         contours, hierarchy = cv2.findContours(
             result, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
@@ -189,7 +190,8 @@ def main(args):
         ) as f:
 
             json.dump(
-                layer_shapes, f,
+                layer_shapes,
+                f,
             )
         cv2.imwrite(
             osp.join(layer_output_dir, f"layer_{layer_idx}_contours.jpg"),
@@ -217,20 +219,23 @@ def main(args):
         )
 
     # Plot contours
-    plt.figure()
-    ax = plt.axes(projection="3d")
-    plot_contours(ax=ax, z_data=depth_grid_quant, levels=args.levels, cmap="viridis")
+    fig = _plot_depth_3D_as_contours(
+        data=depth_grid_quant,
+        cell_size_m=args.cell_size_m,
+        levels=args.levels,
+        cmap="viridis",
+        title=f"Depth as 3d contours. N-Levels={args.levels}",
+    )
     plt.savefig(osp.join(output_dir, "separated_contours.jpg"), dpi=500)
     plt.close()
 
     # Plot inverted contours
-    plt.figure()
-    ax = plt.axes(projection="3d")
-    plot_contours(
-        ax=ax,
-        z_data=-(depth_grid_quant - np.amax(depth_grid_quant)),
+    fig = _plot_depth_3D_as_contours(
+        data=-(depth_grid_quant - np.amax(depth_grid_quant)),
+        cell_size_m=args.cell_size_m,
         levels=args.levels,
         cmap="viridis",
+        title=f"Depth as 3d contours. N-Levels={args.levels}",
     )
     plt.savefig(osp.join(output_dir, "separated_contours_inverted.jpg"), dpi=500)
     plt.close()
@@ -247,16 +252,22 @@ if __name__ == "__main__":
         help="Path to GIS ASCII data file.",
     )
     parser.add_argument(
-        "--output",
-        type=str,
-        default=osp.join("output", "contour_plots"),
-        help="Path to write plots.",
+        "--cell_size_m",
+        type=int,
+        default=100,
+        help="The resolution of x,y readings in m.",
     )
     parser.add_argument(
-        "--levels",
-        type=int,
-        default=4,
-        help="The number of evenly spaced contour levels. This includes the depth-0 contour. ie: N levels will correspond to N-1 output layers.",
+        "--depth_min_m",
+        type=float,
+        default=0.0,
+        help="Min depth in meters, values will be clipped.",
+    )
+    parser.add_argument(
+        "--depth_max_m",
+        type=float,
+        default=None,
+        help="If provided and > 0, Max depth in meters, values will be clipped.",
     )
     parser.add_argument(
         "--max_z_score",
@@ -265,10 +276,28 @@ if __name__ == "__main__":
         help="The number of evenly spaced contour levels.",
     )
     parser.add_argument(
+        "--levels",
+        type=int,
+        default=4,
+        help="The number of evenly spaced contour levels. This includes the depth-0 contour. ie: N levels will correspond to N-1 output layers.",
+    )
+    parser.add_argument(
         "--quantize_depth_start_m",
         type=float,
         default=1.0,
         help="The starting depth for the first layer... beyond which subsequent layers will be evenly spaced. This helps to visualize shallow depths when overall water depth range is high.",
+    )
+    parser.add_argument(
+        "--scale_up_factor",
+        default=4,
+        type=int,
+        help="The scale up factor to use (multiple of 2) when smoothing.",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=osp.join("output", "contour_plots"),
+        help="Path to write plots.",
     )
     args = parser.parse_args()
 

@@ -1,4 +1,7 @@
 .vscode/
+scratch.sh
+resources/bathymetry/
+dev_out/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
