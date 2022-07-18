@@ -10,3 +10,4 @@ dependencies:
     - pip:
         - opencv-python-headless
         - scikit-learn
+        - shapely

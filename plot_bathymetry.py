@@ -1,3 +1,4 @@
+import json
 import os
 import os.path as osp
 
@@ -16,6 +17,10 @@ from viz import (
 
 
 def main(args):
+    os.makedirs(args.output, exist_ok=True)
+    with open(osp.join(args.output, "args.json"), "w") as f:
+        json.dump(vars(args), f)
+
     print("Loading data...")
     depth_grid = load_data(
         fpath=args.input,
@@ -29,8 +34,6 @@ def main(args):
     print(f"Max depth: {depth_grid.max()}m")
 
     inverted_depth_grid = -(depth_grid - np.amax(depth_grid))
-
-    os.makedirs(args.output, exist_ok=True)
 
     print("Creating histogram...")
     fig = _plot_histogram(depth_grid.flatten())

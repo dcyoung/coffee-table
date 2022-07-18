@@ -108,3 +108,39 @@ def _plot_depth_3D_surface(
     ax.set_zlabel("Z (m)")
     fig.tight_layout()
     return fig
+
+
+def plot_polys(shapes, title: str = "Polygon"):
+    fig = plt.figure(figsize=(12, 12))
+    for i, shape in enumerate(shapes):
+        verts = shape["vertices"]
+        plt.plot(
+            [xy[0] for xy in verts],
+            [xy[1] for xy in verts],
+            label=f"{i}_orig_x{len(verts)}",
+        )
+        verts = shape["simplified"]
+        plt.plot(
+            [xy[0] for xy in verts],
+            [xy[1] for xy in verts],
+            label=f"{i}_simp_x{len(verts)}",
+        )
+        for j, hole in enumerate(shape["holes"]):
+            verts = hole["vertices"]
+            plt.plot(
+                [xy[0] for xy in verts],
+                [xy[1] for xy in verts],
+                label=f"{i}_{j}_orig_x{len(verts)}",
+            )
+            verts = hole["simplified"]
+            plt.plot(
+                [xy[0] for xy in verts],
+                [xy[1] for xy in verts],
+                label=f"{i}_{j}_simp_x{len(verts)}",
+            )
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+    plt.legend()
+    plt.title(title)
+    fig.tight_layout()
+    return fig

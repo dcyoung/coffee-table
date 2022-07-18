@@ -8,13 +8,19 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from shapely import geometry
 from tqdm import tqdm
 
 from data_helpers import load_data
-from viz import _plot_depth_3D_as_contours, _plot_histogram
+from viz import _plot_depth_3D_as_contours, _plot_histogram, plot_polys
 
 
 def main(args):
+    output_dir = args.output
+    os.makedirs(output_dir, exist_ok=True)
+    with open(osp.join(output_dir, "args.json"), "w") as f:
+        json.dump(vars(args), f)
+
     print("Loading data...")
     depth_grid = load_data(
         fpath=args.input,
@@ -30,8 +36,6 @@ def main(args):
     print(f"Max depth: {max_depth_m}m")
 
     print("Creating plots...")
-    output_dir = args.output
-    os.makedirs(output_dir, exist_ok=True)
 
     # Histogram
     fig = _plot_histogram(depth_grid.flatten())
@@ -142,11 +146,12 @@ def main(args):
             wip = cv2.pyrDown(wip)
         # Threshold back
         result = wip >= 128
-        result = np.invert(result)
-        im_smoothed = Image.fromarray(result)
+
+        im_smoothed = Image.fromarray(np.invert(result))
         im_smoothed.save(osp.join(layer_output_dir, f"layer_{layer_idx}_smoothed.png"))
 
         with NamedTemporaryFile("w", suffix=".pnm") as f:
+            # potrace raster-> svg required .pnm file as input
             im_smoothed.save(f.name)
             subprocess.run(
                 [
@@ -170,11 +175,21 @@ def main(args):
             c_idx for c_idx in range(hierarchy.shape[1]) if hierarchy[0][c_idx][3] == -1
         ]:
 
-            def get_verts(contour_index: int):
-                c = np.squeeze(contours[contour_index], axis=1).astype(np.float32)
-                c[:, 0] /= result.shape[1]
-                c[:, 1] /= result.shape[0]
-                return c.tolist()
+            def get_poly(contour_index: int):
+                # Store as normalized coords on a square canvas
+                c = (
+                    np.squeeze(contours[contour_index], axis=1).astype(np.float32)
+                    / int(max(result.shape))
+                ).tolist()
+                # c = np.squeeze(contours[contour_index], axis=1).astype(np.float32)
+                # c[:, 0] /= int(result.shape[1])
+                # c[:, 1] /= int(result.shape[0])
+                # c = c.tolist()
+
+                return geometry.Polygon(c)
+
+            def get_verts(poly):
+                return [list(xy) for xy in zip(*poly.exterior.coords.xy)]
 
             # identify contours which represent holes in this contour
             hole_indices = [
@@ -185,8 +200,19 @@ def main(args):
 
             layer_shapes.append(
                 {
-                    "vertices": get_verts(top_level_contour_idx),
-                    "holes": [{"vertices": get_verts(h_idx)} for h_idx in hole_indices],
+                    "vertices": get_verts(get_poly(top_level_contour_idx)),
+                    "simplified": get_verts(
+                        get_poly(top_level_contour_idx).simplify(tolerance=0.001)
+                    ),
+                    "holes": [
+                        {
+                            "vertices": get_verts(get_poly(h_idx)),
+                            "simplified": get_verts(
+                                get_poly(h_idx).simplify(tolerance=0.001)
+                            ),
+                        }
+                        for h_idx in hole_indices
+                    ],
                 }
             )
         with open(
@@ -196,6 +222,11 @@ def main(args):
             json.dump(
                 layer_shapes, f,
             )
+
+        fig = plot_polys(layer_shapes)
+        plt.savefig(osp.join(layer_output_dir, f"layer_{layer_idx}_contours_viz.jpg"))
+        plt.close()
+
         cv2.imwrite(
             osp.join(layer_output_dir, f"layer_{layer_idx}_contours.jpg"),
             cv2.drawContours(
