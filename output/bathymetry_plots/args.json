@@ -1,0 +1,1 @@
+{"input": "resources/bathymetry/FullBay100/msl1k.asc", "cell_size_m": 100, "depth_unit_m": 0.01, "depth_min_m": 0.0, "depth_max_m": null, "max_z_score": 0.0, "output": "output/bathymetry_plots"}

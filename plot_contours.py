@@ -113,6 +113,9 @@ def main(args):
         * max_depth_m
         / 255.0
     )
+    with open(osp.join(output_dir, "quantized_depth_values.json"), "w") as f:
+        json.dump(quantized_depth_values.tolist(), f)
+
     # Plot quantized heatmap
     plt.figure()
     p = plt.imshow(depth_grid_quant)
@@ -132,7 +135,12 @@ def main(args):
     layer_output_dir = osp.join(output_dir, "layer_masks")
     os.makedirs(layer_output_dir, exist_ok=True)
     for layer_idx, layer_depth in tqdm(enumerate(quantized_depth_values[1:])):
-        layer_mask = depth_grid_quant >= layer_depth
+        # Retrieve the mask for thi slayer. If configured for the first layer, ignore the quantization and take anything with a depth reading > 0
+        layer_mask = (
+            depth_grid_quant > 0
+            if layer_idx == 0 and args.force_first_layer
+            else depth_grid_quant >= layer_depth
+        )
         layer_mask_im = Image.fromarray(255 * layer_mask.astype(np.uint8))
         layer_mask_im.save(osp.join(layer_output_dir, f"layer_{layer_idx}.png"))
 
@@ -176,20 +184,29 @@ def main(args):
         ]:
 
             def get_poly(contour_index: int):
-                # Store as normalized coords on a square canvas
-                c = (
-                    np.squeeze(contours[contour_index], axis=1).astype(np.float32)
-                    / int(max(result.shape))
-                ).tolist()
+                # # Store as normalized coords relative to original image
                 # c = np.squeeze(contours[contour_index], axis=1).astype(np.float32)
                 # c[:, 0] /= int(result.shape[1])
                 # c[:, 1] /= int(result.shape[0])
                 # c = c.tolist()
 
+                # Store as normalized coords on a square canvas
+                c = (
+                    np.squeeze(contours[contour_index], axis=1).astype(np.float32)
+                    / int(max(result.shape))
+                ).tolist()
+
+                # Convert to polygon
                 return geometry.Polygon(c)
 
             def get_verts(poly):
                 return [list(xy) for xy in zip(*poly.exterior.coords.xy)]
+
+            def get_vert_count(contour_index: int):
+                return len(np.squeeze(contours[contour_index], axis=1))
+
+            if get_vert_count(top_level_contour_idx) <= 2:
+                continue
 
             # identify contours which represent holes in this contour
             hole_indices = [
@@ -212,6 +229,7 @@ def main(args):
                             ),
                         }
                         for h_idx in hole_indices
+                        if get_vert_count(h_idx) > 2
                     ],
                 }
             )
@@ -278,6 +296,16 @@ def main(args):
 if __name__ == "__main__":
     import argparse
 
+    def str2bool(v):
+        if isinstance(v, bool):
+            return v
+        if v.lower() in ("yes", "true", "t", "y", "1"):
+            return True
+        elif v.lower() in ("no", "false", "f", "n", "0"):
+            return False
+        else:
+            raise argparse.ArgumentTypeError("Boolean value expected.")
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--input",
@@ -332,6 +360,12 @@ if __name__ == "__main__":
         default=4,
         type=int,
         help="The scale up factor to use (multiple of 2) when smoothing.",
+    )
+    parser.add_argument(
+        "--force_first_layer",
+        type=str2bool,
+        default=True,
+        help="If True, force all depth > 0 to be included in the first layer. This helps with high depth range, causing the shallow areas be shorelines to be marked as 0.",
     )
     parser.add_argument(
         "--output",

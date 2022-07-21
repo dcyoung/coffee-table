@@ -18,7 +18,6 @@ def load_data(
         # data provided as a grid w/ 100m spacing, with z-depth values representing water depth
         # Depth units are in cm, increasing positive depths. Negative values indicate intertidal.
         depth_grid = np.loadtxt(fpath, skiprows=7)
-        depth_grid /= 100.0  # convert cm to meters
     elif fpath.lower().endswith(".geo.tif") or "geotif" in ext.lower():
         with Image.open(fpath) as im:
             depth_grid = np.asarray(im).astype(np.float32)

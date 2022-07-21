@@ -8,13 +8,19 @@ def _plot_histogram(data):
     fig = plt.figure()
     # plot
     plt.hist(data, color="c", edgecolor="k")
-    plt.axvline(data_mean, color="k", linestyle="dashed")
+    plt.axvline(data_mean, color="k", linestyle="dashed", label="mean")
     for i in range(3):
-        plt.axvline(data_mean + (i + 1) * data_std, color="y", linestyle="dashed")
+        plt.axvline(
+            data_mean + (i + 1) * data_std,
+            color="y",
+            linestyle="dashed",
+            label=f"{i+1} std",
+        )
 
     plt.title("Depth Readings Histogram (m)")
     plt.ylabel("# of depth readings")
     plt.xlabel("Water depth (m)")
+    plt.legend()
     fig.tight_layout()
     return fig
 
