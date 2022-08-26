@@ -1,0 +1,7 @@
+name: bathy
+dependencies:
+  - python=3.10
+  - black
+  - pylint
+  - pip:
+      - -r requirements.txt

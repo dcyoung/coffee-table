@@ -1,0 +1,8 @@
+numpy
+matplotlib
+pillow==9.2.0
+tqdm
+scikit-learn==1.1.2
+opencv-python-headless==4.6.0.66
+shapely==1.8.4
+streamlit==1.12

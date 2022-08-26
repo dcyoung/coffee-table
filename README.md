@@ -44,21 +44,3 @@ Regular             |  Inverted
 ![reg](output/bathymetry_plots/heightmap.jpg)  |  ![inverted](output/bathymetry_plots/heightmap_inverted.jpg)
 ![reg](output/bathymetry_plots/wireframe.jpg)  |  ![inverted](output/bathymetry_plots/wireframe_inverted.jpg)
 ![reg](output/bathymetry_plots/surface.jpg)  |  ![inverted](output/bathymetry_plots/surface_inverted.jpg)
-
-## Setup
-
-A conda [environment.yml](environment.yml) has been provided.
-
-```bash
-# Build environment
-conda env create -f environment.yml
-
-# Launch environment
-source activate coffee-table
-```
-
-Alternatively, a [requirements.txt](requirements.txt) file has been provided.
-
-```bash
-pip install -r requirements.txt
-```

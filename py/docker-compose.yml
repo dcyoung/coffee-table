@@ -1,0 +1,12 @@
+services:
+  streamlit:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./
+    ports:
+      - '8501:8501'
+    volumes:
+      - './data:/data:delegated'
+      - './src:/src:delegated'
+    environment:
+      - PYTHONUNBUFFERED=1
