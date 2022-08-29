@@ -157,8 +157,15 @@ def run(context):
             layer_sketches.append(sketch)
             exterior_profiles = get_outer_profiles(sketch.profiles)
             for profile_idx, profile in enumerate(exterior_profiles):
-                # Draft extrusion can fail depending on shape of contour... so repeat extrude on failure w/ smaller draft angle
-                for draft_scalar in [1.0, 0.75, 0.5, 0.25, 0.1, 0.0]:
+                # Draft extrusion can fail depending on shape of contour...
+                # so repeat extrusion w/ binary search to find the working scalar <= 1.0
+                last_known_working = 0.0
+                last_known_failing = 2.0
+                done = False
+                while not done:
+                    diff = abs(last_known_failing - last_known_working)
+                    # mid point (binary search)
+                    draft_scalar = last_known_working + diff / 2.0
                     e_input = root.features.extrudeFeatures.createInput(
                         profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
                     )
@@ -182,8 +189,18 @@ def run(context):
                     )
                     extrude = root.features.extrudeFeatures.add(e_input)
                     if extrude.errorOrWarningMessage:
+                        # Failure case...
+                        # try again w/ decreased draft angle
                         extrude.deleteMe()
+                        last_known_failing = draft_scalar
                         continue
+                    elif draft_scalar < 1.0 and diff > 0.01:
+                        # Success case... but could be better?
+                        # Try again w/ increasing draft angle
+                        extrude.deleteMe()
+                        last_known_working = draft_scalar
+                        continue
+
                     for body_idx, body in enumerate(extrude.bodies):
                         body.name = (
                             f"layer_{layer_idx}_profile_{profile_idx}_body_{body_idx}"
