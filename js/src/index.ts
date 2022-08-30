@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CSG } from "three-csg-ts";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 import { BathymetryContourGeometriesLoader } from './model-loader';
@@ -39,6 +40,30 @@ window.addEventListener('resize', onWindowResize, false);
 
 // Controls 
 const controls = new OrbitControls(camera, renderer.domElement);
+// const transformControls = new TransformControls(camera, renderer.domElement);
+// const disableControl = (): void => {
+//   transformControls.detach();
+//   scene.remove(transformControls);
+// }
+// const controlRotation = (object: THREE.Mesh): void => {
+//   transformControls.detach();
+//   transformControls.attach(object);
+//   transformControls.showY = true;
+//   transformControls.showZ = false;
+//   transformControls.showX = false;
+//   transformControls.setMode('rotate');
+//   transformControls.rotationSnap = Math.PI / 35;
+//   scene.add(transformControls);
+// }
+// const controlPlacement = (object: THREE.Mesh): void => {
+//   transformControls.detach();
+//   transformControls.attach(object);
+//   transformControls.showY = false;
+//   transformControls.showZ = true;
+//   transformControls.showX = true;
+//   transformControls.setMode('translate');
+//   scene.add(transformControls);
+// }
 
 // Materials
 const tableTextureLoader = new THREE.TextureLoader(loadingManager).setPath(`${ASSETS_ROOT_PATH}textures/concrete_floor_worn_001/`);
@@ -81,12 +106,12 @@ new EXRLoader(loadingManager)
   });
 
 
-  // Dimensions
-  const slabLongDim = 1.0;
-  const slabShortDim = 1.0;
-  const slabHeight = 0.118;
-  const maxWaterDepth = 0.8 * slabHeight;
-  const waterRotation = new THREE.Vector3(Math.PI / 2, 0, -Math.PI / 4);
+// Dimensions
+const slabLongDim = 1.0;
+const slabShortDim = 1.0;
+const slabHeight = 0.118;
+const maxWaterDepth = 0.8 * slabHeight;
+const waterRotation = new THREE.Vector3(Math.PI / 2, 0, -Math.PI / 4);
 
 // Slab body setup
 const slabGeometry = new THREE.BoxGeometry(slabShortDim, slabHeight, slabLongDim);
@@ -107,6 +132,8 @@ new BathymetryContourGeometriesLoader(loadingManager).load(
     bathymetryMesh.rotation.x = waterRotation.x;
     bathymetryMesh.rotation.z = waterRotation.z;
     scene.add(bathymetryMesh);
+    // controlRotation(bathymetryMesh);
+    // controlPlacement(bathymetryMesh);
 
     // Cutout the water from the tile to leave the bathymetry contour
     for (const contourGeometries of contourGeometriesByLayer) {
@@ -134,7 +161,7 @@ const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
   const t_sec = clock.getElapsedTime();
-  if(bathymetryMesh != null) {
+  if (bathymetryMesh != null) {
     bathymetryMesh.position.y = 0.05 * (1 + Math.sin(0.5 * t_sec));
   }
   renderer.render(scene, camera);
