@@ -1,9 +1,12 @@
 import json
 import os
 import os.path as osp
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from common.data_helpers import load_data
 from common.viz import (
     _plot_depth_3D_as_contours,

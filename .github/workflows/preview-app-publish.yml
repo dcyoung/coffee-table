@@ -1,0 +1,22 @@
+name: Preview App Build and Deploy
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3
+      - name: Install and Build
+        run: |
+          cd js
+          npm install
+          npm run build:gh-pages
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: js/dist # The folder the action should deploy.

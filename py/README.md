@@ -31,12 +31,26 @@ docker compose up
 
 ```bash
 # Plot bathymetry data
-python scripts/plot_bathymetry.py \
+python src/scripts/plot_bathymetry.py \
 ...
 
 # Quantize bathymetry data
-python scripts/quantize.py \
+python src/scripts/quantize.py \
 ...
+```
+
+Alternatively, you can execute scripts using the docker container:
+
+```bash
+# Build the docker image
+docker build -t coffee:latest .
+# Run a script
+docker run -it --rm \
+    -v /path/to/data:/data \
+    -v /path/to/output:/output:z \
+    coffee:latest \
+    python /src/scripts/quantize.py \
+    ...
 ```
 
 ## GUI App

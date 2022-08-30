@@ -2,11 +2,15 @@ import json
 import os
 import os.path as osp
 import subprocess
+import sys
 from tempfile import NamedTemporaryFile
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from common.data_helpers import load_data
 from common.quantize import get_contours, quantize_depth_grid, smooth_layer_mask
 from common.viz import (
@@ -15,7 +19,6 @@ from common.viz import (
     _plot_histogram,
     plot_polys,
 )
-from PIL import Image
 from tqdm import tqdm
 
 

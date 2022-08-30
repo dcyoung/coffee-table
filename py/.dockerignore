@@ -1,6 +1,4 @@
 *
 **
-!src/*.py
-!src/*/*.py
-!src/**/*.py
+!src/
 !requirements.txt

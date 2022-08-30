@@ -1,14 +1,6 @@
-# Javascript
-
-## Quantization
+# Bathymetry Preview App ![Release](https://github.com/dcyoung/coffee-table/actions/workflows/preview-app-publish.yml/badge.svg)
 
 ```bash
 npm install
-
-# To quantize an image
-node quantize.js
+npm run start
 ```
-
-## Contour Visualization
-
-Host `viz.html` and open in browser. VSCode has a nice "LiveServe" that makes this easy.
