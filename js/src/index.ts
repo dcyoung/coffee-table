@@ -3,6 +3,17 @@ import { CSG } from "three-csg-ts";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
+import { BathymetryContourGeometriesLoader } from './model-loader';
+
+// Loading progress bar
+const loadingManager = new THREE.LoadingManager();
+loadingManager.onProgress = (url, loaded, total) => {
+  const progressBar = document.getElementById("progress-bar") as HTMLProgressElement;
+  progressBar.value = (loaded / total) * 100;
+};
+loadingManager.onLoad = () => {
+  document.querySelector<HTMLElement>('.progress-bar-container').style.display = 'none';
+}
 
 const ASSETS_ROOT_PATH = "assets/";
 const scene = new THREE.Scene();
@@ -26,12 +37,11 @@ function onWindowResize() {
 }
 window.addEventListener('resize', onWindowResize, false);
 
-
 // Controls 
 const controls = new OrbitControls(camera, renderer.domElement);
 
 // Materials
-const tableTextureLoader = new THREE.TextureLoader().setPath(`${ASSETS_ROOT_PATH}textures/concrete_floor_worn_001/`);
+const tableTextureLoader = new THREE.TextureLoader(loadingManager).setPath(`${ASSETS_ROOT_PATH}textures/concrete_floor_worn_001/`);
 const tableMaterial = new THREE.MeshStandardMaterial();
 tableMaterial.envMapIntensity = 2.0;
 const tableDiffMap = tableTextureLoader.load("diff_4k.jpg");
@@ -58,7 +68,7 @@ const glassMaterial = new THREE.MeshPhysicalMaterial(
 // Environment Map
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
-new EXRLoader()
+new EXRLoader(loadingManager)
   .load(`${ASSETS_ROOT_PATH}env-maps/large_corridor_4k.exr`, function (texture) {
     let exrCubeRenderTarget = pmremGenerator.fromEquirectangular(texture);
     scene.environment = exrCubeRenderTarget.texture;
@@ -71,66 +81,12 @@ new EXRLoader()
   });
 
 
-// Dimensions
-const slabLongDim = 1.0;
-const slabShortDim = 1.0;
-const slabHeight = 0.118;
-
-// Layers setup
-function shapeFromVerts(vertices: Array<Array<number>>): THREE.Shape {
-  const vRoot = vertices[0];
-  const shape = new THREE.Shape();
-  shape.moveTo(vRoot[0], vRoot[1]);
-  for (const v of vertices.slice(1)) {
-    shape.lineTo(v[0], v[1]);
-  }
-  shape.lineTo(vRoot[0], vRoot[1]);
-  return shape;
-}
-
-let shapesByLayer = [];
-let layerIdx = 0;
-while (true) {
-  const response = await fetch(`${ASSETS_ROOT_PATH}contour-layers/lake-tahoe/layer_${layerIdx}_contours.json`);
-  if (!response.ok) {
-    break;
-  }
-  const shapesForLayer = [];
-  const contours = await response.json();
-  for (const contour of contours) {
-    const shape = shapeFromVerts(contour.simplified);
-    for (const h of contour.holes) {
-      shape.holes.push(shapeFromVerts(h.simplified));
-    }
-    shapesForLayer.push(shape);
-  }
-  shapesByLayer.push(shapesForLayer)
-  layerIdx++;
-}
-
-const extrudeSettings = {
-  steps: 1,
-  depth: 0.8 * slabHeight / shapesByLayer.length,
-  bevelEnabled: false,
-};
-const contourGeometriesByLayer = [];
-for (let layerIdx = 0; layerIdx < shapesByLayer.length; layerIdx++) {
-  const contourGeometries = [];
-  for (const shape of shapesByLayer[layerIdx]) {
-    const contourGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    // Center and offset for layer index
-    contourGeometry.translate(-0.5, -0.5, layerIdx * extrudeSettings.depth);
-    contourGeometries.push(contourGeometry);
-  }
-  contourGeometriesByLayer.push(contourGeometries);
-}
-
-const waterRotation = new THREE.Vector3(Math.PI/2, 0, -Math.PI/4);
-const bathymetryGeometry = mergeBufferGeometries(contourGeometriesByLayer.flat());
-const bathymetryMesh = new THREE.Mesh(bathymetryGeometry, glassMaterial);
-bathymetryMesh.rotation.x = waterRotation.x;
-bathymetryMesh.rotation.z = waterRotation.z;
-scene.add(bathymetryMesh);
+  // Dimensions
+  const slabLongDim = 1.0;
+  const slabShortDim = 1.0;
+  const slabHeight = 0.118;
+  const maxWaterDepth = 0.8 * slabHeight;
+  const waterRotation = new THREE.Vector3(Math.PI / 2, 0, -Math.PI / 4);
 
 // Slab body setup
 const slabGeometry = new THREE.BoxGeometry(slabShortDim, slabHeight, slabLongDim);
@@ -138,28 +94,49 @@ const slabBodyPreCut = new THREE.Mesh(slabGeometry, tableMaterial);
 slabBodyPreCut.position.y = 1.01 * (-slabHeight / 2);
 slabBodyPreCut.updateMatrix();
 let slabBody: THREE.Mesh = null;
-for (const contourGeometries of contourGeometriesByLayer) {
-  const layerGeometry = mergeBufferGeometries(contourGeometries);
-  const layerMesh = new THREE.Mesh(layerGeometry, glassMaterial);
-  layerMesh.rotation.x = waterRotation.x;
-  layerMesh.rotation.z = waterRotation.z;
-  layerMesh.updateMatrix();
-  if (slabBody == null) {
-    slabBody = CSG.subtract(slabBodyPreCut, layerMesh);
+let bathymetryMesh: THREE.Mesh = null;
+
+// Layers setup
+new BathymetryContourGeometriesLoader(loadingManager).load(
+  `${ASSETS_ROOT_PATH}contour-layers/lake-tahoe`,
+  maxWaterDepth,
+  (contourGeometriesByLayer) => {
+    // Create the merged bathymetry water mesh water 
+    const bathymetryGeometry = mergeBufferGeometries(contourGeometriesByLayer.flat());
+    bathymetryMesh = new THREE.Mesh(bathymetryGeometry, glassMaterial);
+    bathymetryMesh.rotation.x = waterRotation.x;
+    bathymetryMesh.rotation.z = waterRotation.z;
+    scene.add(bathymetryMesh);
+
+    // Cutout the water from the tile to leave the bathymetry contour
+    for (const contourGeometries of contourGeometriesByLayer) {
+      const layerGeometry = mergeBufferGeometries(contourGeometries);
+      const layerMesh = new THREE.Mesh(layerGeometry, glassMaterial);
+      layerMesh.rotation.x = waterRotation.x;
+      layerMesh.rotation.z = waterRotation.z;
+      layerMesh.updateMatrix();
+      if (slabBody == null) {
+        slabBody = CSG.subtract(slabBodyPreCut, layerMesh);
+      }
+      else {
+        slabBody = CSG.subtract(slabBody, layerMesh);
+      }
+    }
+    scene.add(slabBody);
+  },
+  (err) => {
+    throw err
   }
-  else {
-    slabBody = CSG.subtract(slabBody, layerMesh);
-  }
-}
-scene.add(slabBody);
+)
 
 // Animate the mechanism
 const clock = new THREE.Clock();
 function animate() {
-  const t_sec = clock.getElapsedTime();
   requestAnimationFrame(animate);
-  bathymetryMesh.position.y = 0.05 * (1 + Math.sin(0.5 * t_sec));
-
+  const t_sec = clock.getElapsedTime();
+  if(bathymetryMesh != null) {
+    bathymetryMesh.position.y = 0.05 * (1 + Math.sin(0.5 * t_sec));
+  }
   renderer.render(scene, camera);
 };
 
