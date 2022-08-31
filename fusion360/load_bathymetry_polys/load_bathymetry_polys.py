@@ -2,12 +2,32 @@
 # Description-
 import os
 import re
-import math
 import json
+import numpy as np
+from typing import List, Dict
 import adsk.core, adsk.fusion, adsk.cam, traceback
 
 
-def get_numbers_from_filename(filename):
+def poly_area(x: np.ndarray, y: np.ndarray) -> float:
+    return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+
+
+def filter_raw_contours_by_area(
+    contours: List[Dict], min_normalized_area: float
+) -> List[Dict]:
+    def contour_area(c) -> float:
+        return poly_area(
+            x=np.array([v[0] for v in c["simplified"]]),
+            y=np.array([v[1] for v in c["simplified"]]),
+        )
+
+    contours = [c for c in contours if contour_area(c) >= min_normalized_area]
+    for c in contours:
+        c["holes"] = [h for h in c["holes"] if contour_area(h) >= min_normalized_area]
+    return contours
+
+
+def get_numbers_from_filename(filename: str) -> str:
     return re.search(r"\d+", filename).group(0)
 
 
@@ -64,7 +84,7 @@ def run(context):
                 "contour_import_size",
                 adsk.core.ValueInput.createByString(f"{coaster_size_param.name}"),
                 "in",
-                "The side length of the coaster",
+                "The side length of a bounding box for in the imported contours.",
             )
         coaster_height_param = design.userParameters.itemByName("coaster_height")
         if not coaster_height_param:
@@ -127,6 +147,15 @@ def run(context):
 
             with open(fpath, "r") as f:
                 contours = json.load(f)
+
+            # remove tiny profiles if configured
+            min_normalized_area = design.userParameters.itemByName(
+                "min_contour_area_normalized"
+            )
+            if min_normalized_area:
+                contours = filter_raw_contours_by_area(
+                    contours=contours, min_normalized_area=min_normalized_area.value
+                )
 
             def add_contour(contour):
                 vertices = [vert2point(v) for v in contour["simplified"]]
