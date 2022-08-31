@@ -4,7 +4,7 @@ import os
 import re
 import json
 import numpy as np
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import adsk.core, adsk.fusion, adsk.cam, traceback
 
 
@@ -50,7 +50,7 @@ def bb_iou(bb1: adsk.core.BoundingBox3D, bb2: adsk.core.BoundingBox3D) -> float:
 
     # compute the intersection over union by taking the intersection
     # area and dividing it by the sum of prediction + ground-truth
-    # areas - the intersection area
+    # areas - the interesection area
     iou = intersection_area / float(bb1_area + bb2_area - intersection_area)
     assert 0.0 <= iou <= 1.0
     return iou
@@ -216,7 +216,9 @@ def run(context):
                 while not done:
                     diff = abs(last_known_failing - last_known_working)
                     # mid point (binary search)
-                    draft_scalar = last_known_working + diff / 2.0
+                    draft_scalar = last_known_working + (
+                        diff / 2.0 if diff > 0.01 else 0
+                    )
                     e_input = root.features.extrudeFeatures.createInput(
                         profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
                     )
@@ -238,7 +240,14 @@ def run(context):
                             f"-{draft_scalar}*{draft_angle_param.name}"
                         ),
                     )
-                    extrude = root.features.extrudeFeatures.add(e_input)
+                    try:
+                        extrude = root.features.extrudeFeatures.add(e_input)
+                    except RuntimeError as e:
+                        if "EXTRUDE_CREATION_FAIL_ERROR" in str(e):
+                            # Failure case...
+                            # try again w/ decreased draft angle
+                            last_known_failing = draft_scalar
+                            continue
                     if extrude.errorOrWarningMessage:
                         # Failure case...
                         # try again w/ decreased draft angle
@@ -248,7 +257,11 @@ def run(context):
                     elif draft_scalar < 1.0 and diff > 0.01:
                         # Success case... but could be better?
                         # Try again w/ increasing draft angle
-                        extrude.deleteMe()
+                        try:
+                            extrude.deleteMe()
+                        except RuntimeError as e:
+                            if "Assocated feature has been deleted." not in str(e):
+                                raise e
                         last_known_working = draft_scalar
                         continue
 
