@@ -12,45 +12,52 @@ def poly_area(x: np.ndarray, y: np.ndarray) -> float:
     return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
 
 
+def contour_area(c: Dict, scale=1.0) -> float:
+    return poly_area(
+        x=scale * np.array([v[0] for v in c["simplified"]]),
+        y=scale * np.array([v[1] for v in c["simplified"]]),
+    )
+
+
 def filter_raw_contours_by_area(
     contours: List[Dict], min_normalized_area: float
 ) -> List[Dict]:
-    def contour_area(c) -> float:
-        return poly_area(
-            x=np.array([v[0] for v in c["simplified"]]),
-            y=np.array([v[1] for v in c["simplified"]]),
-        )
-
     contours = [c for c in contours if contour_area(c) >= min_normalized_area]
     for c in contours:
         c["holes"] = [h for h in c["holes"] if contour_area(h) >= min_normalized_area]
     return contours
 
 
+def bb_iou(bb1: adsk.core.BoundingBox3D, bb2: adsk.core.BoundingBox3D) -> float:
+    if not bb1.intersects(bb2):
+        return 0
+
+    # determine the coordinates of the intersection rectangle
+    x_left = max(bb1.minPoint.x, bb2.minPoint.x)
+    y_top = max(bb1.minPoint.y, bb2.minPoint.y)
+    x_right = min(bb1.maxPoint.x, bb2.maxPoint.x)
+    y_bottom = min(bb1.maxPoint.y, bb2.maxPoint.y)
+
+    assert x_right > x_left and y_bottom > y_top
+
+    # The intersection of two axis-aligned bounding boxes is always an
+    # axis-aligned bounding box
+    intersection_area = (x_right - x_left) * (y_bottom - y_top)
+
+    # compute the area of both AABBs
+    bb1_area = (bb1.maxPoint.x - bb1.minPoint.x) * (bb1.maxPoint.y - bb1.minPoint.y)
+    bb2_area = (bb2.maxPoint.x - bb2.minPoint.x) * (bb2.maxPoint.y - bb2.minPoint.y)
+
+    # compute the intersection over union by taking the intersection
+    # area and dividing it by the sum of prediction + ground-truth
+    # areas - the intersection area
+    iou = intersection_area / float(bb1_area + bb2_area - intersection_area)
+    assert 0.0 <= iou <= 1.0
+    return iou
+
+
 def get_numbers_from_filename(filename: str) -> str:
     return re.search(r"\d+", filename).group(0)
-
-
-def get_outer_profiles(profiles):
-    # find target curve sizes which are holes
-    hole_curve_sizes = set()
-    for p in profiles:
-        for pl in p.profileLoops:
-            if not pl.isOuter:
-                hole_curve_sizes.add(len(pl.profileCurves))
-
-    # Only keep non hole profiles
-    exterior_profiles = []
-    for p in profiles:
-        if (
-            len(p.profileLoops) <= 1
-            and len(p.profileLoops[0].profileCurves) in hole_curve_sizes
-        ):
-            continue
-        exterior_profiles.append(p)
-    return sorted(
-        exterior_profiles, key=lambda p: p.areaProperties().area, reverse=True
-    )
 
 
 def run(context):
@@ -136,7 +143,6 @@ def run(context):
                 0,
             )
 
-        layer_sketches = []
         layer_bodies = []
         progressDialog = ui.createProgressDialog()
         for layer_idx, fpath in enumerate(sorted_layer_fpaths):
@@ -157,7 +163,7 @@ def run(context):
                     contours=contours, min_normalized_area=min_normalized_area.value
                 )
 
-            def add_contour(contour):
+            def add_contour(contour) -> adsk.core.BoundingBox3D:
                 vertices = [vert2point(v) for v in contour["simplified"]]
                 progressDialog.show(
                     "Progress Dialog",
@@ -178,13 +184,29 @@ def run(context):
 
                 progressDialog.hide()
 
+                bb = adsk.core.BoundingBox3D.create(vertices[0], vertices[1])
+                for v in vertices[2:]:
+                    assert bb.expand(v)
+                return bb
+
+            outer_contour_bounding_boxes = []
             for contour in contours:
-                add_contour(contour)
+                outer_contour_bounding_boxes.append(add_contour(contour))
                 for hole in contour["holes"]:
                     add_contour(hole)
 
-            layer_sketches.append(sketch)
-            exterior_profiles = get_outer_profiles(sketch.profiles)
+            def is_outer(p, tolerance: float = 0.01) -> bool:
+                for bb in outer_contour_bounding_boxes:
+                    if bb_iou(p.boundingBox, bb) >= (1 - tolerance):
+                        return True
+
+                return False
+
+            exterior_profiles = sorted(
+                [p for p in sketch.profiles if is_outer(p)],
+                key=lambda p: p.areaProperties().area,
+                reverse=True,
+            )
             for profile_idx, profile in enumerate(exterior_profiles):
                 # Draft extrusion can fail depending on shape of contour...
                 # so repeat extrusion w/ binary search to find the working scalar <= 1.0
@@ -238,7 +260,7 @@ def run(context):
                     break
 
         # Combine the layer bodies
-        if len(layer_bodies) >= 2:
+        if len(sorted_layer_fpaths) >= 2 and len(layer_bodies):
             tool_bodies = adsk.core.ObjectCollection.create()
             for body in layer_bodies[1:]:
                 tool_bodies.add(body)
