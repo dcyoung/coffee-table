@@ -183,3 +183,11 @@ def _plot_contour_results(background: np.ndarray, contours: Any, hierarchy: Any)
         (255, 0, 0),
         3,
     )
+
+
+def viz_rotated_rectangle(
+    background: np.ndarray, box: np.ndarray, color=None
+) -> np.ndarray:
+    if color is None:
+        color = (0, 0, 255)
+    return cv2.drawContours(background, [box], 0, color, 2)

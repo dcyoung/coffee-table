@@ -2,7 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 from common.quantize import get_contours, quantize_depth_grid, smooth_layer_mask
-from common.st_extensions import upload_and_configure_depth_grid, viz_depth_grid
+from common.st_extensions import (
+    crop_depth_grid,
+    upload_and_configure_depth_grid,
+    viz_depth_grid,
+)
 from common.viz import (
     _plot_contour_results,
     _plot_depth_as_heat_map,
@@ -14,7 +18,6 @@ from PIL import Image
 
 def main():
     st.title("Quantize Bathymetry")
-
     depth_grid = upload_and_configure_depth_grid()
     if depth_grid is None:
         st.warning("No data grid...")
@@ -25,6 +28,8 @@ def main():
         options=[3, 10, 30, 90],
         value=30,
     )
+
+    depth_grid = crop_depth_grid(depth_grid=depth_grid)
 
     st.subheader("Details")
     st.write("Grid shape: {0}".format(depth_grid.shape))

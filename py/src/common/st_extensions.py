@@ -1,14 +1,92 @@
+from typing import Tuple
+import cv2
 import numpy as np
 import streamlit as st
 
 from .data_helpers import load_data, load_raw
+from .image_utils import im_resize, crop_box
 from .io import list_bathy_files
 from .viz import (
     _plot_depth_3D_as_contours,
     _plot_depth_3D_as_height_map,
     _plot_depth_3D_surface,
     _plot_depth_3D_wireframe,
+    viz_rotated_rectangle,
 )
+
+
+@st.cache(allow_output_mutation=True)
+def cached_load_data(**kwargs):
+    with st.spinner("Loading data..."):
+        return load_data(**kwargs)
+
+
+@st.cache(allow_output_mutation=True)
+def load_raw_cached(**kwargs):
+    with st.spinner("Loading raw data..."):
+        return load_raw(**kwargs)
+
+
+def crop_depth_grid(depth_grid: np.ndarray) -> np.ndarray:
+    if not st.checkbox(label="Crop Region", value=False):
+        return np.copy(depth_grid)
+    c1, _, c2 = st.columns((1, 1, 4))
+    crop_rotation_angle_cw = c1.slider(
+        label="Rotation (deg CW)",
+        value=0,
+        min_value=0,
+        max_value=90,
+        step=5,
+        help="The amount of degrees to rotate the image.",
+    )
+    crop_x = c1.slider(
+        label="x",
+        value=0.5,
+        min_value=0.1,
+        max_value=0.9,
+        step=0.05,
+        help="The x1 coord",
+    )
+    crop_y = c1.slider(
+        label="y",
+        value=0.5,
+        min_value=0.1,
+        max_value=0.9,
+        step=0.05,
+        help="The y1 coord",
+    )
+    crop_size = c1.slider(
+        label="size",
+        value=0.5,
+        min_value=0.1,
+        max_value=1.5,
+        step=0.01,
+        help="The box size",
+    )
+
+    def scaled_crop_config(dims) -> Tuple:
+        h, w = dims[:2]
+        return (
+            (w * crop_x, h * crop_y),
+            (max(h, w) * crop_size, max(h, w) * crop_size),
+            crop_rotation_angle_cw,
+        )
+
+    resized_rgb = np.stack(
+        (im_resize(img=depth_grid, max_dim=1080).astype(np.uint8),) * 3,
+        axis=-1,
+    )
+    c2.image(
+        viz_rotated_rectangle(
+            background=resized_rgb,
+            box=np.int0(cv2.boxPoints(scaled_crop_config(dims=resized_rgb.shape))),
+        ),
+        channels="BGR",
+    )
+    return crop_box(
+        img=np.copy(depth_grid),
+        box=scaled_crop_config(dims=depth_grid.shape),
+    )
 
 
 def upload_and_configure_depth_grid() -> np.ndarray:
@@ -42,7 +120,7 @@ def upload_and_configure_depth_grid() -> np.ndarray:
     depth_unit_m = depth_units_map[depth_unit_name]
 
     max_possible_depth_as_read = int(
-        (load_raw(fpath=input_file) * depth_unit_m).max() + 0.5
+        (load_raw_cached(fpath=input_file) * depth_unit_m).max() + 0.5
     )
     depth_grid_min_max_m = st.sidebar.slider(
         label="Min/max depth (m)",
@@ -62,7 +140,7 @@ def upload_and_configure_depth_grid() -> np.ndarray:
         help="The max z-score beyond which data is clipped.",
     )
 
-    return load_data(
+    return cached_load_data(
         fpath=input_file,
         depth_unit_m=depth_unit_m,
         depth_min_m=min(depth_grid_min_max_m),
