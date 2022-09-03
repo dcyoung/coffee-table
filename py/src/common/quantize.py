@@ -1,10 +1,15 @@
 from dataclasses import dataclass
+import json
+from pathlib import Path
 from typing import Any, Dict, List
 
 import cv2
 import numpy as np
 from PIL import Image
 from shapely import geometry
+import matplotlib.pyplot as plt
+
+from .viz import _plot_contour_results, plot_polys
 
 
 def calculate_normalized_quantized_depths(
@@ -131,7 +136,7 @@ def get_contours(
         c_idx for c_idx in range(hierarchy.shape[1]) if hierarchy[0][c_idx][3] == -1
     ]:
 
-        def get_poly(contour_index: int):
+        def get_poly(contour_index: int, simp_tolerance: float = 0):
             # # Store as normalized coords relative to original image
             # c = np.squeeze(contours[contour_index], axis=1).astype(np.float32)
             # c[:, 0] /= int(result.shape[1])
@@ -145,7 +150,10 @@ def get_contours(
             ).tolist()
 
             # Convert to polygon
-            return geometry.Polygon(c)
+            poly = geometry.Polygon(c)
+            if simp_tolerance > 0:
+                return poly.simplify(tolerance=simp_tolerance)
+            return poly
 
         def get_verts(poly):
             return [list(xy) for xy in zip(*poly.exterior.coords.xy)]
@@ -167,15 +175,13 @@ def get_contours(
             {
                 "vertices": get_verts(get_poly(top_level_contour_idx)),
                 "simplified": get_verts(
-                    get_poly(top_level_contour_idx).simplify(
-                        tolerance=simplify_tolerance
-                    )
+                    get_poly(top_level_contour_idx, simp_tolerance=simplify_tolerance)
                 ),
                 "holes": [
                     {
                         "vertices": get_verts(get_poly(h_idx)),
                         "simplified": get_verts(
-                            get_poly(h_idx).simplify(tolerance=simplify_tolerance)
+                            get_poly(h_idx, simp_tolerance=simplify_tolerance)
                         ),
                     }
                     for h_idx in hole_indices
@@ -190,3 +196,71 @@ def get_contours(
         hierarchy=hierarchy,
         layer_shapes=layer_shapes,
     )
+
+
+def export_quantize_results(
+    quantize_results: QuantizeResult,
+    output_dir: Path,
+    force_first_layer: bool = True,
+    scale_up_factor: int = 4,
+    simplify_tolerance: float = 0.001,
+):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    quantize_results.depth_map_im_quant.save(output_dir / "depth_map_quantized.png")
+
+    with open(output_dir / "quantized_depth_values.json", "w") as f:
+        json.dump(quantize_results.quantized_depth_values.tolist(), f)
+
+    output_layers_dir = output_dir / "layer_masks"
+    output_layers_dir.mkdir(parents=True, exist_ok=True)
+    for layer_idx, layer_depth in enumerate(
+        quantize_results.quantized_depth_values[1:]
+    ):
+        # Retrieve the mask for this layer. If configured for the first layer, ignore the quantization and take anything with a depth reading > 0
+        layer_mask = (
+            quantize_results.depth_grid_quant > 0
+            if layer_idx == 0 and force_first_layer
+            else quantize_results.depth_grid_quant >= layer_depth
+        )
+        layer_mask_smoothed = smooth_layer_mask(
+            layer_mask, scale_up_factor=scale_up_factor
+        )
+        layer_mask_im = Image.fromarray(255 * layer_mask.astype(np.uint8))
+        layer_mask_im.save(output_layers_dir / f"layer_{layer_idx}.jpg")
+
+        im_smoothed = Image.fromarray(np.invert(layer_mask_smoothed))
+        im_smoothed.save(output_layers_dir / f"layer_{layer_idx}_smoothed.jpg")
+        # with NamedTemporaryFile("w", suffix=".pnm") as f:
+        #     # potrace raster-> svg required .pnm file as input
+        #     im_smoothed.save(f.name)
+        #     subprocess.run(
+        #         [
+        #             "potrace",
+        #             f.name,
+        #             "-s",
+        #             "-o",
+        #             osp.join(output_layers_dir, f"layer_{layer_idx}_smoothed.svg"),
+        #         ]
+        #     )
+
+        contour_results = get_contours(
+            layer_mask=layer_mask_smoothed, simplify_tolerance=simplify_tolerance
+        )
+        with open(output_layers_dir / f"layer_{layer_idx}_contours.json", "w") as f:
+            json.dump(
+                contour_results.layer_shapes,
+                f,
+            )
+
+        fig = plot_polys(contour_results.layer_shapes)
+        plt.savefig(output_layers_dir / f"layer_{layer_idx}_contours_viz.jpg")
+        plt.close()
+
+        cv2.imwrite(
+            str(output_layers_dir / f"layer_{layer_idx}_contours.jpg"),
+            _plot_contour_results(
+                background=contour_results.layer_mask_bw,
+                contours=contour_results.contours,
+                hierarchy=contour_results.hierarchy,
+            ),
+        )

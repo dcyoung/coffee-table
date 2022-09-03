@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 
 import cv2
 import matplotlib.pyplot as plt
@@ -125,34 +125,35 @@ def _plot_depth_3D_surface(
     return fig
 
 
-def plot_polys(shapes, title: str = "Polygon"):
+def plot_polys(
+    shapes,
+    title: str = "Polygon",
+    include_original: bool = True,
+    include_simplified: bool = True,
+    max_labels=35,
+):
     fig = plt.figure(figsize=(12, 12))
+    label_idx = 0
+
+    def _internal_plot_poly(verts: List[List[float]], label: str = None):
+        nonlocal label_idx
+        plt.plot(
+            [xy[0] for xy in verts],
+            [1 - xy[1] for xy in verts],
+            label=f"{label}x{len(verts)}" if label_idx < max_labels else None,
+        )
+
     for i, shape in enumerate(shapes):
-        verts = shape["vertices"]
-        plt.plot(
-            [xy[0] for xy in verts],
-            [1 - xy[1] for xy in verts],
-            label=f"{i}_orig_x{len(verts)}",
-        )
-        verts = shape["simplified"]
-        plt.plot(
-            [xy[0] for xy in verts],
-            [1 - xy[1] for xy in verts],
-            label=f"{i}_simp_x{len(verts)}",
-        )
+        if include_original:
+            _internal_plot_poly(verts=shape["vertices"], label=f"{i}_orig")
+        if include_simplified:
+            _internal_plot_poly(verts=shape["simplified"], label=f"{i}_simp")
+
         for j, hole in enumerate(shape["holes"]):
-            verts = hole["vertices"]
-            plt.plot(
-                [xy[0] for xy in verts],
-                [1 - xy[1] for xy in verts],
-                label=f"{i}_{j}_orig_x{len(verts)}",
-            )
-            verts = hole["simplified"]
-            plt.plot(
-                [xy[0] for xy in verts],
-                [1 - xy[1] for xy in verts],
-                label=f"{i}_{j}_simp_x{len(verts)}",
-            )
+            if include_original:
+                _internal_plot_poly(verts=hole["vertices"], label=f"{i}_{j}_orig")
+            if include_simplified:
+                _internal_plot_poly(verts=hole["simplified"], label=f"{i}_{j}_simp")
     plt.xlim(0, 1)
     plt.ylim(0, 1)
     plt.legend()

@@ -1,25 +1,23 @@
 import json
 import os
 import os.path as osp
-import subprocess
+from pathlib import Path
 import sys
-from tempfile import NamedTemporaryFile
-
-import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from common.data_helpers import load_data
-from common.quantize import get_contours, quantize_depth_grid, smooth_layer_mask
+from common.quantize import (
+    export_quantize_results,
+    quantize_depth_grid,
+    smooth_layer_mask,
+)
 from common.viz import (
-    _plot_contour_results,
     _plot_depth_3D_as_contours,
     _plot_histogram,
-    plot_polys,
 )
-from tqdm import tqdm
 
 
 def main(args):
@@ -62,7 +60,7 @@ def main(args):
     plt.xlabel(f"X ({args.cell_size_m} m)")
     plt.ylabel(f"Y ({args.cell_size_m} m)")
     plt.savefig(
-        osp.join(output_dir, "depth_map_raw_plot.png"),
+        osp.join(output_dir, "depth_map_raw_plot.jpg"),
         dpi=1000,
     )
     plt.close()
@@ -75,12 +73,6 @@ def main(args):
     print(
         f"Quantizing w/ {args.levels} discrete depth values: {[round(max_depth_m*z, 1) for z in quantize_results.quantized_depth_values_norm]}m"
     )
-    quantize_results.depth_map_im_quant.save(
-        osp.join(output_dir, "depth_map_quantized.png")
-    )
-
-    with open(osp.join(output_dir, "quantized_depth_values.json"), "w") as f:
-        json.dump(quantize_results.quantized_depth_values.tolist(), f)
 
     # Plot quantized heatmap
     plt.figure()
@@ -93,67 +85,19 @@ def main(args):
     plt.xlabel(f"X ({args.cell_size_m} m)")
     plt.ylabel(f"Y ({args.cell_size_m} m)")
     plt.savefig(
-        osp.join(output_dir, "depth_map_quantized_plot.png"),
+        osp.join(output_dir, "depth_map_quantized_plot.jpg"),
         dpi=1000,
     )
     plt.close()
 
     # Create masks for the layers
-    layer_output_dir = osp.join(output_dir, "layer_masks")
-    os.makedirs(layer_output_dir, exist_ok=True)
-    for layer_idx, layer_depth in tqdm(
-        enumerate(quantize_results.quantized_depth_values[1:])
-    ):
-        # Retrieve the mask for this layer. If configured for the first layer, ignore the quantization and take anything with a depth reading > 0
-        layer_mask = (
-            quantize_results.depth_grid_quant > 0
-            if layer_idx == 0 and args.force_first_layer
-            else quantize_results.depth_grid_quant >= layer_depth
-        )
-        layer_mask_smoothed = smooth_layer_mask(
-            layer_mask, scale_up_factor=args.scale_up_factor
-        )
-
-        layer_mask_im = Image.fromarray(255 * layer_mask.astype(np.uint8))
-        layer_mask_im.save(osp.join(layer_output_dir, f"layer_{layer_idx}.png"))
-
-        im_smoothed = Image.fromarray(np.invert(layer_mask_smoothed))
-        im_smoothed.save(osp.join(layer_output_dir, f"layer_{layer_idx}_smoothed.png"))
-
-        with NamedTemporaryFile("w", suffix=".pnm") as f:
-            # potrace raster-> svg required .pnm file as input
-            im_smoothed.save(f.name)
-            subprocess.run(
-                [
-                    "potrace",
-                    f.name,
-                    "-s",
-                    "-o",
-                    osp.join(layer_output_dir, f"layer_{layer_idx}_smoothed.svg"),
-                ]
-            )
-
-        contour_results = get_contours(layer_mask=layer_mask_smoothed)
-        with open(
-            osp.join(layer_output_dir, f"layer_{layer_idx}_contours.json"), "w"
-        ) as f:
-            json.dump(
-                contour_results.layer_shapes,
-                f,
-            )
-
-        fig = plot_polys(contour_results.layer_shapes)
-        plt.savefig(osp.join(layer_output_dir, f"layer_{layer_idx}_contours_viz.jpg"))
-        plt.close()
-
-        cv2.imwrite(
-            osp.join(layer_output_dir, f"layer_{layer_idx}_contours.jpg"),
-            _plot_contour_results(
-                background=contour_results.layer_mask_bw,
-                contours=contour_results.contours,
-                hierarchy=contour_results.hierarchy,
-            ),
-        )
+    export_quantize_results(
+        quantize_results=quantize_results,
+        output_dir=Path(output_dir) / "layer_masks",
+        force_first_layer=args.force_first_layer,
+        scale_up_factor=args.scale_up_factor,
+        simplify_tolerance=0.001,
+    )
 
     # Plot contours
     fig = _plot_depth_3D_as_contours(

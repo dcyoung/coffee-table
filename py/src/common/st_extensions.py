@@ -28,14 +28,12 @@ def load_raw_cached(**kwargs):
 
 
 def crop_depth_grid(depth_grid: np.ndarray) -> np.ndarray:
-    if not st.checkbox(label="Crop Region", value=False):
-        return np.copy(depth_grid)
     c1, _, c2 = st.columns((1, 1, 4))
     crop_rotation_angle_cw = c1.slider(
         label="Rotation (deg CW)",
-        value=0,
-        min_value=0,
-        max_value=90,
+        value=-0,
+        min_value=-45,
+        max_value=45,
         step=5,
         help="The amount of degrees to rotate the image.",
     )
@@ -72,19 +70,19 @@ def crop_depth_grid(depth_grid: np.ndarray) -> np.ndarray:
             crop_rotation_angle_cw,
         )
 
-    resized_rgb = np.stack(
-        (im_resize(img=depth_grid, max_dim=1080).astype(np.uint8),) * 3,
-        axis=-1,
+    resized = im_resize(img=depth_grid, max_dim=1080)
+    resized_norm_rgb = np.stack(
+        ((255.0 * resized / resized.max()).astype(np.uint8()),) * 3, axis=-1
     )
     c2.image(
         viz_rotated_rectangle(
-            background=resized_rgb,
-            box=np.int0(cv2.boxPoints(scaled_crop_config(dims=resized_rgb.shape))),
+            background=resized_norm_rgb,
+            box=np.int0(cv2.boxPoints(scaled_crop_config(dims=resized_norm_rgb.shape))),
         ),
         channels="BGR",
     )
     return crop_box(
-        img=np.copy(depth_grid),
+        img=depth_grid,
         box=scaled_crop_config(dims=depth_grid.shape),
     )
 

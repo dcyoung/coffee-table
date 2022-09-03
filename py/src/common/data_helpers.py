@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import os
 from pathlib import Path
 from typing import Optional, TextIO, Union
@@ -5,6 +6,19 @@ from typing import Optional, TextIO, Union
 import numpy as np
 from PIL import Image
 from scipy import stats
+
+
+@dataclass(frozen=True)
+class Config:
+    cell_size_m: int
+    depth_unit_m: float
+    depth_min_m: float
+    depth_max_m: float
+    max_z_score: float
+    levels: int
+    quantize_depth_start_m: float
+    scale_up_factor: int
+    force_first_layer: bool
 
 
 def load_raw(
