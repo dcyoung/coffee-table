@@ -1,17 +1,29 @@
 {
   "files": {
     "main.css": "/coffee-table/static/css/main.91418c3d.css",
-    "main.js": "/coffee-table/static/js/main.b181b8f8.js",
+    "main.js": "/coffee-table/static/js/main.8937b6ba.js",
+    "static/js/51.7c0ca987.chunk.js": "/coffee-table/static/js/51.7c0ca987.chunk.js",
+    "static/js/519.10ea35fe.chunk.js": "/coffee-table/static/js/519.10ea35fe.chunk.js",
+    "static/js/699.16d79e3d.chunk.js": "/coffee-table/static/js/699.16d79e3d.chunk.js",
+    "static/js/416.5d8f422f.chunk.js": "/coffee-table/static/js/416.5d8f422f.chunk.js",
     "static/js/787.77ec4f78.chunk.js": "/coffee-table/static/js/787.77ec4f78.chunk.js",
-    "static/media/coaster.glb": "/coffee-table/static/media/coaster.c68eb2977e43e2f5a31c.glb",
-    "static/media/water.glb": "/coffee-table/static/media/water.ef6500a570f40cf8b2d2.glb",
+    "static/js/655.44f22a52.chunk.js": "/coffee-table/static/js/655.44f22a52.chunk.js",
+    "static/media/coaster.glb": "/coffee-table/static/media/coaster.56cef5a07c56f59d4229.glb",
+    "static/media/water.glb": "/coffee-table/static/media/water.d51b6f9824782807c6db.glb",
+    "static/media/water_0.glb": "/coffee-table/static/media/water_0.a42cbdf8bb2451fdb4ee.glb",
+    "static/media/water_1.glb": "/coffee-table/static/media/water_1.5b6142e63fe1ba1a0697.glb",
     "index.html": "/coffee-table/index.html",
     "main.91418c3d.css.map": "/coffee-table/static/css/main.91418c3d.css.map",
-    "main.b181b8f8.js.map": "/coffee-table/static/js/main.b181b8f8.js.map",
-    "787.77ec4f78.chunk.js.map": "/coffee-table/static/js/787.77ec4f78.chunk.js.map"
+    "main.8937b6ba.js.map": "/coffee-table/static/js/main.8937b6ba.js.map",
+    "51.7c0ca987.chunk.js.map": "/coffee-table/static/js/51.7c0ca987.chunk.js.map",
+    "519.10ea35fe.chunk.js.map": "/coffee-table/static/js/519.10ea35fe.chunk.js.map",
+    "699.16d79e3d.chunk.js.map": "/coffee-table/static/js/699.16d79e3d.chunk.js.map",
+    "416.5d8f422f.chunk.js.map": "/coffee-table/static/js/416.5d8f422f.chunk.js.map",
+    "787.77ec4f78.chunk.js.map": "/coffee-table/static/js/787.77ec4f78.chunk.js.map",
+    "655.44f22a52.chunk.js.map": "/coffee-table/static/js/655.44f22a52.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.91418c3d.css",
-    "static/js/main.b181b8f8.js"
+    "static/js/main.8937b6ba.js"
   ]
 }
