@@ -1,9 +1,8 @@
-import { Html, useProgress } from "@react-three/drei";
+// import { Html } from "@react-three/drei";
 
 export const LoadingScreen = (): JSX.Element => {
-  const { active, progress, errors, item, loaded, total } = useProgress()
-  return (<Html center>{progress} % total</Html>);
-  // return (<span>loading...</span>);
+  // return (<Html center>Loading...</Html>);
+  return <span>Loading...</span>;
 }
 
 export default LoadingScreen;

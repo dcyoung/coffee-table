@@ -1,4 +1,16 @@
+import { Suspense, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import ModelBase from "./modelBase";
+
+export const CoasterModelPlaceholder = ({ ...props }): JSX.Element => {
+  return (
+    <mesh {...props}>
+      <boxGeometry args={[101.6, 12.7, 101.6]}></boxGeometry>
+      <meshStandardMaterial color={'beige'} />
+    </mesh>
+  );
+}
 
 export interface CoasterBaseProps {
   urlCoaster: string;
@@ -10,10 +22,25 @@ export const CoasterBase = ({
   urlWater,
   ...props
 }: CoasterBaseProps): JSX.Element => {
+  const coaster = useRef<THREE.Group>(null!);
+
+  useFrame(({ clock }) => {
+    if (!coaster.current) {
+      return;
+    }
+    const t = clock.getElapsedTime()
+    coaster.current.rotation.z = THREE.MathUtils.lerp(coaster.current.rotation.z, Math.cos(t / 2) / 20 + 0.25, 0.1)
+    coaster.current.rotation.y = THREE.MathUtils.lerp(coaster.current.rotation.y, Math.sin(t / 4) / 20, 0.1)
+    coaster.current.rotation.x = THREE.MathUtils.lerp(coaster.current.rotation.x, Math.sin(t / 8) / 20, 0.1)
+    coaster.current.position.y = THREE.MathUtils.lerp(coaster.current.position.y, (-2 + Math.sin(t / 2)) / 2, 0.1)
+  })
+
   return (
-    <group {...props}>
-      <ModelBase url={urlCoaster}></ModelBase>
-      <ModelBase url={urlWater}></ModelBase>
+    <group ref={coaster} {...props}>
+      <Suspense fallback={<CoasterModelPlaceholder></CoasterModelPlaceholder>}>
+        <ModelBase url={urlCoaster}></ModelBase>
+        <ModelBase url={urlWater}></ModelBase>
+      </Suspense>
     </group>
   );
 }
