@@ -1,6 +1,6 @@
 import { useGLTF } from '@react-three/drei'
 
-export interface ModelBaseProps {
+export declare interface ModelBaseProps {
     url: string;
 }
 

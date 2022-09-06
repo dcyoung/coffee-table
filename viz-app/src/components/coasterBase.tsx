@@ -12,14 +12,16 @@ export const CoasterModelPlaceholder = ({ ...props }): JSX.Element => {
   );
 }
 
-export interface CoasterBaseProps {
+export declare interface CoasterBaseProps {
   urlCoaster: string;
-  urlWater: string;
+  urlsWater: string[];
+  importRotation: number;
 }
 
 export const CoasterBase = ({
   urlCoaster,
-  urlWater,
+  urlsWater,
+  importRotation = 0.0,
   ...props
 }: CoasterBaseProps): JSX.Element => {
   const coaster = useRef<THREE.Group>(null!);
@@ -38,8 +40,10 @@ export const CoasterBase = ({
   return (
     <group ref={coaster} {...props}>
       <Suspense fallback={<CoasterModelPlaceholder></CoasterModelPlaceholder>}>
-        <ModelBase url={urlCoaster}></ModelBase>
-        <ModelBase url={urlWater}></ModelBase>
+        <ModelBase url={urlCoaster} rotation-y={importRotation}></ModelBase>
+        {
+          urlsWater.map((url) => { return <ModelBase url={url} rotation-y={importRotation}></ModelBase> })
+        }
       </Suspense>
     </group>
   );

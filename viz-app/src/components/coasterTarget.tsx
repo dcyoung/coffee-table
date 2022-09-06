@@ -1,22 +1,42 @@
-import CoasterMonterey from "./coasters/monterey/model";
-import CoasterCatalina from "./coasters/catalina/model";
+import React, { Suspense } from "react";
 
-export interface CoasterTargetProps {
+export declare interface CoasterTargetProps {
     name: string;
 }
 
-export const CoasterTarget = ({
-    name,
-    ...props
-}: CoasterTargetProps): JSX.Element => {
+const getImportName = (name: string): string => {
     switch (name.toLowerCase()) {
         case "monterey":
-            return <CoasterMonterey {...props}></CoasterMonterey>;
+        case "monterey-bay":
+        case "monterey bay":
+            return "monterey";
         case "catalina":
-            return <CoasterCatalina {...props}></CoasterCatalina>;
+        case "catalina island":
+            return "catalina";
+        case "san-francisco bay":
+        case "sf":
+        case "sf-bay":
+        case "san-francisco":
+        case "san francisco":
+            return "san-francisco-bay";
+        case "lake tahoe":
+        case "lake-tahoe":
+        case "tahoe":
+            return "lake-tahoe";
         default:
             throw new Error(`Unknown target ${name}`);
     }
 }
+
+
+export const CoasterTarget = ({ name, ...props }: CoasterTargetProps) => {
+    const CoasterComponent = React.lazy(() => import(`./coasters/${getImportName(name)}/model`));
+    return (
+        <Suspense fallback={null}>
+            <CoasterComponent {...props} />
+        </Suspense>
+    );
+}
+
 
 export default CoasterTarget;

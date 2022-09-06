@@ -9,7 +9,7 @@ const App = (): JSX.Element => {
   const { Selection } = useControls({
     Selection: {
       value: "monterey",
-      options: ["monterey", "catalina"]
+      options: ["monterey", "catalina", "san-francisco bay", "lake tahoe"]
     },
   });
 
