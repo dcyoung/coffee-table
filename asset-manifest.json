@@ -1,17 +1,17 @@
 {
   "files": {
     "main.css": "/coffee-table/static/css/main.91418c3d.css",
-    "main.js": "/coffee-table/static/js/main.7016032a.js",
+    "main.js": "/coffee-table/static/js/main.24d1eca4.js",
     "static/js/787.77ec4f78.chunk.js": "/coffee-table/static/js/787.77ec4f78.chunk.js",
-    "static/media/water.glb": "/coffee-table/static/media/water.7ea6bc7b52cac0fe8e31.glb",
     "static/media/coaster.glb": "/coffee-table/static/media/coaster.c68eb2977e43e2f5a31c.glb",
+    "static/media/water.glb": "/coffee-table/static/media/water.ef6500a570f40cf8b2d2.glb",
     "index.html": "/coffee-table/index.html",
     "main.91418c3d.css.map": "/coffee-table/static/css/main.91418c3d.css.map",
-    "main.7016032a.js.map": "/coffee-table/static/js/main.7016032a.js.map",
+    "main.24d1eca4.js.map": "/coffee-table/static/js/main.24d1eca4.js.map",
     "787.77ec4f78.chunk.js.map": "/coffee-table/static/js/787.77ec4f78.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.91418c3d.css",
-    "static/js/main.7016032a.js"
+    "static/js/main.24d1eca4.js"
   ]
 }
