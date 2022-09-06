@@ -17,6 +17,8 @@ jobs:
           cd viz-app
           npm install
           npm run build
+        env:
+          CI: ""
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
