@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import ModelBase from "./modelBase";
 import { useScroll } from "@react-three/drei";
+import { hover } from "@testing-library/user-event/dist/hover";
 
 export const CoasterModelPlaceholder = ({ ...props }): JSX.Element => {
   return (
@@ -33,6 +34,14 @@ export const CoasterBase = ({
   const coaster = useRef<THREE.Group>(null!);
   const scroll = useScroll();
 
+  const hover = (clock: THREE.Clock) => {
+    // add slight hover effect
+    const t = clock.getElapsedTime()
+    coaster.current.position.y += 0.01 * Math.sin(1 * t);
+    coaster.current.rotation.z += 0.01 * Math.cos(0.5 * t);
+    coaster.current.rotation.y += 0.01 * Math.cos(0.7 * t);
+  }
+
   useFrame(({ clock }) => {
     if (!coaster.current) {
       return;
@@ -41,6 +50,7 @@ export const CoasterBase = ({
     const nPages = orientationSequence.length - 1;
     if (nPages <= 0) {
       coaster.current.setRotationFromQuaternion(currOrientation);
+      hover(clock);
       return;
     }
     
@@ -60,13 +70,8 @@ export const CoasterBase = ({
       // Set orientation based on scroll
       currOrientation.slerpQuaternions(prevOrientation, targetOrientation, progress);
       coaster.current.setRotationFromQuaternion(currOrientation);
+      hover(clock);
     });
-    
-    // add slight hover effect
-    const t = clock.getElapsedTime()
-    coaster.current.position.y += 0.01 * Math.sin(1 * t);
-    coaster.current.rotation.z += 0.01 * Math.cos(0.5 * t);
-    coaster.current.rotation.y += 0.01 * Math.cos(0.7 * t);
   })
 
   return (
