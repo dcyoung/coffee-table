@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { CoasterBase } from "../../coasterBase";
 import MODEL_PATH_WATER_0 from "./water_0.glb";
 import MODEL_PATH_WATER_1 from "./water_1.glb";
@@ -7,6 +8,9 @@ export const CoasterLakeTahoe = ({ ...props }): JSX.Element => CoasterBase({
     urlCoaster: MODEL_PATH_COASTER, 
     urlsWater: [MODEL_PATH_WATER_0, MODEL_PATH_WATER_1], 
     importRotation: 0,
+    orientationSequence: [
+        (new THREE.Quaternion()).setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0)
+    ],
     ...props,
 });
 

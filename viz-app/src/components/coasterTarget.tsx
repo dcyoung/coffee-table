@@ -28,7 +28,6 @@ const getImportName = (name: string): string => {
     }
 }
 
-
 export const CoasterTarget = ({ name, ...props }: CoasterTargetProps) => {
     const CoasterComponent = React.lazy(() => import(`./coasters/${getImportName(name)}/model`));
     return (
