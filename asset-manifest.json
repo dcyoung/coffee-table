@@ -1,29 +1,29 @@
 {
   "files": {
     "main.css": "/coffee-table/static/css/main.91418c3d.css",
-    "main.js": "/coffee-table/static/js/main.9046b6b0.js",
-    "static/js/51.304a5e2e.chunk.js": "/coffee-table/static/js/51.304a5e2e.chunk.js",
-    "static/js/519.3827e25a.chunk.js": "/coffee-table/static/js/519.3827e25a.chunk.js",
-    "static/js/699.9051b2e5.chunk.js": "/coffee-table/static/js/699.9051b2e5.chunk.js",
-    "static/js/416.d714650e.chunk.js": "/coffee-table/static/js/416.d714650e.chunk.js",
+    "main.js": "/coffee-table/static/js/main.da13eff6.js",
+    "static/js/496.db4adb18.chunk.js": "/coffee-table/static/js/496.db4adb18.chunk.js",
+    "static/js/53.6936435f.chunk.js": "/coffee-table/static/js/53.6936435f.chunk.js",
+    "static/js/594.6ae242cb.chunk.js": "/coffee-table/static/js/594.6ae242cb.chunk.js",
+    "static/js/191.cbf40e0c.chunk.js": "/coffee-table/static/js/191.cbf40e0c.chunk.js",
     "static/js/787.77ec4f78.chunk.js": "/coffee-table/static/js/787.77ec4f78.chunk.js",
     "static/js/655.44f22a52.chunk.js": "/coffee-table/static/js/655.44f22a52.chunk.js",
-    "static/media/coaster.glb": "/coffee-table/static/media/coaster.56cef5a07c56f59d4229.glb",
-    "static/media/water.glb": "/coffee-table/static/media/water.d51b6f9824782807c6db.glb",
-    "static/media/water_0.glb": "/coffee-table/static/media/water_0.a42cbdf8bb2451fdb4ee.glb",
-    "static/media/water_1.glb": "/coffee-table/static/media/water_1.5b6142e63fe1ba1a0697.glb",
+    "static/media/coaster-draco.glb": "/coffee-table/static/media/coaster-draco.782430deb7bd06518fa6.glb",
+    "static/media/water-draco.glb": "/coffee-table/static/media/water-draco.cd703b542d9ebb6a09e8.glb",
+    "static/media/water_0-draco.glb": "/coffee-table/static/media/water_0-draco.44b6e51755d2a2608195.glb",
+    "static/media/water_1-draco.glb": "/coffee-table/static/media/water_1-draco.a99fda9718277a4ffa48.glb",
     "index.html": "/coffee-table/index.html",
     "main.91418c3d.css.map": "/coffee-table/static/css/main.91418c3d.css.map",
-    "main.9046b6b0.js.map": "/coffee-table/static/js/main.9046b6b0.js.map",
-    "51.304a5e2e.chunk.js.map": "/coffee-table/static/js/51.304a5e2e.chunk.js.map",
-    "519.3827e25a.chunk.js.map": "/coffee-table/static/js/519.3827e25a.chunk.js.map",
-    "699.9051b2e5.chunk.js.map": "/coffee-table/static/js/699.9051b2e5.chunk.js.map",
-    "416.d714650e.chunk.js.map": "/coffee-table/static/js/416.d714650e.chunk.js.map",
+    "main.da13eff6.js.map": "/coffee-table/static/js/main.da13eff6.js.map",
+    "496.db4adb18.chunk.js.map": "/coffee-table/static/js/496.db4adb18.chunk.js.map",
+    "53.6936435f.chunk.js.map": "/coffee-table/static/js/53.6936435f.chunk.js.map",
+    "594.6ae242cb.chunk.js.map": "/coffee-table/static/js/594.6ae242cb.chunk.js.map",
+    "191.cbf40e0c.chunk.js.map": "/coffee-table/static/js/191.cbf40e0c.chunk.js.map",
     "787.77ec4f78.chunk.js.map": "/coffee-table/static/js/787.77ec4f78.chunk.js.map",
     "655.44f22a52.chunk.js.map": "/coffee-table/static/js/655.44f22a52.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.91418c3d.css",
-    "static/js/main.9046b6b0.js"
+    "static/js/main.da13eff6.js"
   ]
 }
