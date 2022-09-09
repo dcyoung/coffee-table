@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { CoasterBase } from "../../coasterBase";
-import MODEL_PATH_WATER_0 from "./water_0.glb";
-import MODEL_PATH_WATER_1 from "./water_1.glb";
-import MODEL_PATH_COASTER from "./coaster.glb";
+import MODEL_PATH_WATER_0 from "./water_0-draco.glb";
+import MODEL_PATH_WATER_1 from "./water_1-draco.glb";
+import MODEL_PATH_COASTER from "./coaster-draco.glb";
 
 export const CoasterLakeTahoe = ({ ...props }): JSX.Element => CoasterBase({
     urlCoaster: MODEL_PATH_COASTER, 
