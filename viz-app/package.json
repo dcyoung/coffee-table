@@ -26,6 +26,7 @@
     "clean": "rm -rf build/",
     "start": "react-scripts start",
     "build": "npm run clean && react-scripts build",
+    "serve": "npm run build && serve build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "deploy": "npm run build && gh-pages -d build"
