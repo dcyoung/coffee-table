@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import * as THREE from "three";
 import ModelBase from "./modelBase";
+import { Clock, Group, Quaternion, Vector3 } from "three";
 
 export const CoasterModelPlaceholder = ({ ...props }): JSX.Element => {
   return (
@@ -15,18 +15,18 @@ export const CoasterModelPlaceholder = ({ ...props }): JSX.Element => {
 export declare interface CoasterBaseProps {
   urls: string[];
   importRotation: number;
-  orientation: THREE.Quaternion;
+  orientation: Quaternion;
 }
 
 export const CoasterBase = ({
   urls,
   importRotation = 0.0,
-  orientation = (new THREE.Quaternion()).setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0),
+  orientation = (new Quaternion()).setFromAxisAngle(new Vector3(0, 1, 0), 0),
   ...props
 }: CoasterBaseProps): JSX.Element => {
-  const coaster = useRef<THREE.Group>(null!);
+  const coaster = useRef<Group>(null!);
 
-  const hover = (clock: THREE.Clock) => {
+  const hover = (clock: Clock) => {
     // add slight hover effect
     const t = clock.getElapsedTime()
     const amplitude = 0.0005;
@@ -48,16 +48,21 @@ export const CoasterBase = ({
 
   return (
     <group ref={coaster} {...props}>
-      <Suspense fallback={<CoasterModelPlaceholder></CoasterModelPlaceholder>}>
-        {
-          urls.map((url, idx) => {
-            return <ModelBase
-              url={url}
-              key={`model-${idx}`}
-              rotation-y={importRotation}></ModelBase>;
-          })
-        }
-      </Suspense>
+      {
+        urls.length > 0
+          ? (
+            <Suspense fallback={<CoasterModelPlaceholder />}>
+              {
+                urls.map((url, idx) => {
+                  return <ModelBase
+                    url={url}
+                    key={`model-${idx}`}
+                    rotation-y={importRotation}></ModelBase>;
+                })
+              }
+            </Suspense>
+          )
+          : <CoasterModelPlaceholder />}
     </group>
   );
 }

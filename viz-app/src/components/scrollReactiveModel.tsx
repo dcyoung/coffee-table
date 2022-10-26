@@ -1,22 +1,22 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import * as THREE from "three";
+import { Euler, Group, Quaternion } from "three";
 import { useScroll } from "@react-three/drei";
 
 export declare interface ScrollReactiveModelProps {
-    orientationSequence: THREE.Quaternion[];
+    orientationSequence: Quaternion[];
     children?: React.ReactNode;
 }
 
 export const ScrollReactiveModel = ({
     orientationSequence = [
-        (new THREE.Quaternion()).setFromEuler(new THREE.Euler(0, 0, 0))
+        (new Quaternion()).setFromEuler(new Euler(0, 0, 0))
     ],
     children = null,
     ...props
 }: ScrollReactiveModelProps): JSX.Element => {
-    const modelRef = useRef<THREE.Group>(null!);
-    const currOrientation = (new THREE.Quaternion()).copy(orientationSequence[0]);
+    const modelRef = useRef<Group>(null!);
+    const currOrientation = (new Quaternion()).copy(orientationSequence[0]);
     const scroll = useScroll();
 
     useFrame(({ clock }) => {
