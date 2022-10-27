@@ -2,12 +2,14 @@ import { Suspense, useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import ModelBase from "./modelBase";
 import { Clock, Group, Quaternion, Vector3 } from "three";
+import { LoadingOverlay } from "./loadingOverlay";
 
 export const CoasterModelPlaceholder = ({ ...props }): JSX.Element => {
   return (
     <mesh {...props}>
       <boxGeometry args={[101.6, 12.7, 101.6]}></boxGeometry>
       <meshStandardMaterial color={'beige'} />
+      <LoadingOverlay msg="Loading..." />
     </mesh>
   );
 }

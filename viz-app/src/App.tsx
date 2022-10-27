@@ -4,6 +4,7 @@ import { ContactShadows, Environment, OrbitControls, ScrollControls, Stats } fro
 import { Suspense } from 'react';
 import { useControls } from 'leva';
 import CoasterTarget from './components/coasterTarget';
+import { LoadingOverlay } from './components/loadingOverlay';
 
 const Contents = ({ scrollable = false }): JSX.Element => {
   const { Selection } = useControls({
@@ -49,7 +50,9 @@ const App = (): JSX.Element => {
       >
         {ManualControl
           ? <>
-            <Contents scrollable={false}></Contents>
+            <Suspense fallback={<LoadingOverlay />}>
+              <Contents scrollable={false}></Contents>
+            </Suspense>
             <OrbitControls></OrbitControls>
           </>
           : <ScrollControls
