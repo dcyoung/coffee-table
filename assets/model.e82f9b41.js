@@ -1,0 +1,1 @@
+import{C as t,Q as a,V as o}from"./index.41f7b92d.js";const s="/coffee-table/assets/water_0-draco.73c5db4d.glb",r="/coffee-table/assets/water_1-draco.9ed932d3.glb",c="/coffee-table/assets/coaster-draco.954d1149.glb",_=({...e})=>t({urls:[c,s,r],importRotation:0,orientation:new a().setFromAxisAngle(new o(0,1,0),0),...e});export{_ as CoasterLakeTahoe,_ as default};
