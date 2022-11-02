@@ -1,1 +1,1 @@
-declare module '*.glb';
+declare module "*.glb";
