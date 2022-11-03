@@ -1,1 +1,0 @@
-import{C as a,Q as t,V as o}from"./index.949ef014.js";const s="/coffee-table/assets/water-draco.0ed8e0b1.glb",r="/coffee-table/assets/coaster-draco.a685f765.glb",c=({...e})=>a({urls:[r,s],importRotation:0,orientation:new t().setFromAxisAngle(new o(0,1,0),0),...e});export{c as CoasterCatalina,c as default};
