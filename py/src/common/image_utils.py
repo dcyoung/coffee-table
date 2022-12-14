@@ -45,9 +45,20 @@ def to_rgb_img(depth_grid: np.ndarray) -> np.ndarray:
     return np.stack(((255.0 * depth_grid).astype(np.uint8),) * 3, axis=-1)
 
 
-def crop_box(img: np.ndarray, box: Tuple) -> np.ndarray:
-    angle = box[2]
+def crop_box(
+    img: np.ndarray, box: Tuple, imagine_out_of_bounds: bool = True
+) -> np.ndarray:
+    if imagine_out_of_bounds:
+        # Pad the image w/ replicated borders before cropping...
+        rows, cols = img.shape[0], img.shape[1]
+        pad_x = rows // 2
+        pad_y = cols // 2
+        img = cv2.copyMakeBorder(img, pad_y, pad_y, pad_x, pad_x, cv2.BORDER_REPLICATE)
+        # offset the desired crop center point by the applied padding
+        box = (tuple(map(sum, zip(box[0], (pad_x, pad_y)))), *box[1:])
+
     rows, cols = img.shape[0], img.shape[1]
+    angle = box[2]
     m = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
     img_rot = cv2.warpAffine(img, m, (cols, rows))
 

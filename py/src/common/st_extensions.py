@@ -61,6 +61,11 @@ def crop_depth_grid(depth_grid: np.ndarray) -> np.ndarray:
         step=0.01,
         help="The box size",
     )
+    image_out_of_bounds = c1.checkbox(
+        label="Imagine Missing Data",
+        value=False,
+        help="If true, pad the image before cropping to imagine missing data.",
+    )
 
     def scaled_crop_config(dims) -> Tuple:
         h, w = dims[:2]
@@ -84,6 +89,7 @@ def crop_depth_grid(depth_grid: np.ndarray) -> np.ndarray:
     return crop_box(
         img=depth_grid,
         box=scaled_crop_config(dims=depth_grid.shape),
+        imagine_out_of_bounds=bool(image_out_of_bounds),
     )
 
 
