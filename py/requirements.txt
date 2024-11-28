@@ -1,6 +1,6 @@
 numpy
 matplotlib
-pillow==9.2.0
+pillow==9.3.0
 tqdm
 scikit-learn==1.1.2
 opencv-python-headless==4.6.0.66
